@@ -1,0 +1,125 @@
+const prisma = require('../utils/prismaClient');
+const { hashPassword, comparePassword } = require('../utils/hash');
+const { generateToken } = require('../utils/jwt');
+
+const register = async (req, res) => {
+    try {
+        const { email, password, role, firstName, lastName, phoneNumber, address } = req.body;
+
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User already exists' });
+        }
+
+        const hashedPassword = await hashPassword(password);
+
+        const newUser = await prisma.user.create({
+            data: {
+                email,
+                password: hashedPassword,
+                role: role || 'CUSTOMER',
+                customerProfile: role === 'CUSTOMER' || !role ? {
+                    create: {
+                        firstName,
+                        lastName,
+                        phoneNumber,
+                        address
+                    }
+                } : undefined
+            },
+            include: {
+                customerProfile: true
+            }
+        });
+
+        const token = generateToken(newUser.id, newUser.role);
+
+        res.status(201).json({
+            message: 'User registered successfully',
+            token,
+            user: {
+                id: newUser.id,
+                email: newUser.email,
+                role: newUser.role,
+                profile: newUser.customerProfile
+            }
+        });
+    } catch (error) {
+        console.error('Registration error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+const login = async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        const user = await prisma.user.findUnique({
+            where: { email },
+            include: { customerProfile: true }
+        });
+
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        const isValid = await comparePassword(password, user.password);
+        if (!isValid) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        const token = generateToken(user.id, user.role);
+
+        res.json({
+            message: 'Login successful',
+            token,
+            user: {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                profile: user.customerProfile
+            }
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+const logout = async (req, res) => {
+    // UI-07/UI-10: Logout
+    // Since we are using stateless JWT, we can't truly invalidate the token server-side without a blacklist/redis.
+    // The client is responsible for clearing the token.
+    res.json({ message: 'You have been logged out successfully.' });
+};
+
+const getProfile = async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            include: { customerProfile: true }
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        res.json({
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            profile: user.customerProfile
+        });
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+module.exports = {
+    register,
+    login,
+    logout,
+    getProfile
+};
