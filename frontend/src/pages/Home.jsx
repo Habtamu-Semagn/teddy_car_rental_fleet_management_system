@@ -37,7 +37,7 @@ const Home = () => {
                             Premium fleet management and car rental services in Ethiopia. <br />Unbeatable prices, unlimited miles.
                         </p>
                         <div className="animate-in slide-in-from-bottom-5 fade-in duration-700 delay-300">
-                            <a href="#fleet" className="bg-primary text-gray-900 px-10 py-4 rounded-full font-bold text-lg hover:bg-white transition-all hover:scale-105 inline-block shadow-lg hover:shadow-primary/50">
+                            <a href="#fleet" className="bg-primary text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-primary transition-all hover:scale-105 inline-block shadow-lg hover:shadow-primary/50">
                                 Browse Fleet
                             </a>
                         </div>
