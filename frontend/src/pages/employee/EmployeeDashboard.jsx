@@ -458,8 +458,8 @@ const EmployeeDashboard = () => {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {availableCars.map((car) => (
-                                        <SelectItem key={car.id} value={car.id}>
-                                            {car.name}
+                                        <SelectItem key={car.id} value={car.id.toString()}>
+                                            {car.make} {car.model}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
