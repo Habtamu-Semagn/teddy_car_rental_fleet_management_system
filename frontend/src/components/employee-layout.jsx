@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import logo from '../assets/logo.png';
 import {
     LayoutDashboard, Car, Package, FileText, Menu, Bell, LogOut, Search, User
 } from 'lucide-react';
@@ -48,13 +48,11 @@ const EmployeeLayout = ({ children }) => {
         <div className="min-h-screen bg-background flex font-sans text-foreground">
             {/* Sidebar - Using Card component for shadcn pattern */}
             <Card className={`${sidebarOpen ? 'w-64' : 'w-20'} border-r border-border transition-all duration-300 fixed h-full z-20 flex flex-col shadow-sm rounded-none`}>
-                <div className="h-16 flex items-center justify-center border-b border-border">
+                <div className="h-20 flex items-center justify-center border-b border-border p-2">
                     {sidebarOpen ? (
-                        <span className="text-xl font-bold text-primary tracking-tight">
-                            Teddy<span className="text-foreground">Employee</span>
-                        </span>
+                        <img src={logo} alt="Teddy Employee" className="w-20 h-20 object-contain" />
                     ) : (
-                        <span className="text-xl font-bold text-primary">TE</span>
+                        <img src={logo} alt="TE" className="h-12 w-12 object-cover rounded" />
                     )}
                 </div>
 

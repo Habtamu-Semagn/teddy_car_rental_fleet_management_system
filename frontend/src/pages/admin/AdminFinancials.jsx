@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     DollarSign, TrendingUp, TrendingDown,
     Calendar, Download, ArrowUpRight, ArrowDownRight,
-    PieChart, BarChart3, Wallet
+    PieChart, BarChart3, Wallet, Loader2
 } from 'lucide-react';
 
 // Shadcn Components
@@ -18,16 +18,36 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import AdminLayout from "@/components/admin-layout";
+import { api } from "@/api";
 
 const AdminFinancials = () => {
-    // Mock Transaction Data
-    const transactions = [
-        { id: 'TX-1001', customer: 'Abebe Kebede', amount: 4500, status: 'Completed', date: '2024-03-20', method: 'CBE Birr', type: 'Revenue' },
-        { id: 'TX-1002', customer: 'Sara Tadesse', amount: 18000, status: 'Completed', date: '2024-03-19', method: 'Bank Transfer', type: 'Revenue' },
-        { id: 'TX-1003', vendor: 'TotalEnergies', amount: 5000, status: 'Completed', date: '2024-03-18', method: 'Cash', type: 'Expense' },
-        { id: 'TX-1004', customer: 'John Doe', amount: 12500, status: 'Pending', date: '2024-03-18', method: 'Telebirr', type: 'Revenue' },
-        { id: 'TX-1005', vendor: 'City Garage', amount: 2500, status: 'Completed', date: '2024-03-17', method: 'Bank Transfer', type: 'Expense' },
-    ];
+    const [transactions, setTransactions] = useState([]);
+    const [stats, setStats] = useState({
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        profitMargin: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchFinancialData = async () => {
+            try {
+                const [overview, txs] = await Promise.all([
+                    api.get('/reports/financials'),
+                    api.get('/reports/transactions')
+                ]);
+                setStats(overview.summary);
+                setTransactions(txs);
+            } catch (error) {
+                console.error('Failed to fetch financial data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchFinancialData();
+    }, []);
+
 
     return (
         <AdminLayout>
@@ -58,11 +78,11 @@ const AdminFinancials = () => {
                         <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Revenue</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-black text-foreground">ETB 245,300</div>
+                        <div className="text-3xl font-black text-foreground">ETB {stats.totalRevenue.toLocaleString()}</div>
                         <div className="flex items-center gap-1.5 mt-2 text-emerald-600 font-bold text-sm">
                             <TrendingUp size={16} />
-                            <span>+12.5%</span>
-                            <span className="text-muted-foreground font-normal">vs last month</span>
+                            <span>Live Sync</span>
+                            <span className="text-muted-foreground font-normal">from all payments</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -75,11 +95,11 @@ const AdminFinancials = () => {
                         <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Expenses</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-black text-foreground">ETB 42,800</div>
+                        <div className="text-3xl font-black text-foreground">ETB {stats.totalExpenses.toLocaleString()}</div>
                         <div className="flex items-center gap-1.5 mt-2 text-red-600 font-bold text-sm">
                             <TrendingDown size={16} />
-                            <span>+4.2%</span>
-                            <span className="text-muted-foreground font-normal">vs last month</span>
+                            <span>Operational</span>
+                            <span className="text-muted-foreground font-normal">maintenance & fuel</span>
                         </div>
                     </CardContent>
                 </Card>
@@ -89,10 +109,10 @@ const AdminFinancials = () => {
                         <CardTitle className="text-sm font-medium text-primary uppercase tracking-wider">Net Profit</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-black text-primary">ETB 202,500</div>
+                        <div className="text-3xl font-black text-primary">ETB {stats.netProfit.toLocaleString()}</div>
                         <div className="flex items-center gap-1.5 mt-2 text-emerald-600 font-bold text-sm">
                             <ArrowUpRight size={16} />
-                            <span>82.5%</span>
+                            <span>{stats.profitMargin.toFixed(1)}%</span>
                             <span className="text-muted-foreground font-normal">profit margin</span>
                         </div>
                     </CardContent>
@@ -106,7 +126,8 @@ const AdminFinancials = () => {
                         <h3 className="font-bold text-lg">Transaction History</h3>
                         <p className="text-sm text-muted-foreground">Recent revenue and operating expense entries.</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                        {loading && <Loader2 className="animate-spin text-primary" size={20} />}
                         <Button variant="ghost" size="sm" className="gap-2">
                             <PieChart size={14} /> Charts
                         </Button>
@@ -128,6 +149,13 @@ const AdminFinancials = () => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
+                        {!loading && transactions.length === 0 && (
+                            <TableRow>
+                                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                                    No transaction history available.
+                                </TableCell>
+                            </TableRow>
+                        )}
                         {transactions.map((tx) => (
                             <TableRow key={tx.id}>
                                 <TableCell className="font-mono text-xs font-bold">{tx.id}</TableCell>
@@ -136,7 +164,7 @@ const AdminFinancials = () => {
                                         <div className={`p-1.5 rounded-full ${tx.type === 'Revenue' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
                                             {tx.type === 'Revenue' ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
                                         </div>
-                                        <span className="font-medium">{tx.customer || tx.vendor}</span>
+                                        <span className="font-medium text-sm">{tx.customer}</span>
                                     </div>
                                 </TableCell>
                                 <TableCell>
@@ -144,18 +172,23 @@ const AdminFinancials = () => {
                                         {tx.type}
                                     </Badge>
                                 </TableCell>
-                                <TableCell className="text-muted-foreground text-sm">{tx.date}</TableCell>
-                                <TableCell className="text-sm text-foreground/80">
+                                <TableCell className="text-muted-foreground text-xs">
+                                    {new Date(tx.date).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell className="text-xs text-foreground/80">
                                     <div className="flex items-center gap-2">
                                         <Wallet size={12} className="text-muted-foreground" />
                                         {tx.method}
                                     </div>
                                 </TableCell>
-                                <TableCell className={`text-right font-black ${tx.type === 'Revenue' ? 'text-foreground' : 'text-red-600'}`}>
+                                <TableCell className={`text-right font-black text-sm ${tx.type === 'Revenue' ? 'text-foreground' : 'text-red-600'}`}>
                                     {tx.type === 'Expense' ? '-' : ''}ETB {tx.amount.toLocaleString()}
                                 </TableCell>
                                 <TableCell className="text-center">
-                                    <Badge variant={tx.status === 'Completed' ? 'success' : 'outline'} className="text-[10px]">
+                                    <Badge
+                                        variant={tx.status === 'SUCCESS' ? 'success' : tx.status === 'PENDING' ? 'warning' : 'destructive'}
+                                        className="text-[10px]"
+                                    >
                                         {tx.status}
                                     </Badge>
                                 </TableCell>
@@ -164,6 +197,7 @@ const AdminFinancials = () => {
                     </TableBody>
                 </Table>
             </Card>
+
         </AdminLayout>
     );
 };

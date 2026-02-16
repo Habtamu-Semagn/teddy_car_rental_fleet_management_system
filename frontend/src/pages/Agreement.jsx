@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Button from '../components/Button';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import { FileText, PenTool } from 'lucide-react';
+import { toast } from 'sonner';
 
 const Agreement = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [signature, setSignature] = useState('');
     const [agreed, setAgreed] = useState(false);
+    const carId = searchParams.get('carId');
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -17,7 +20,9 @@ const Agreement = () => {
         // Simulate signing
         setTimeout(() => {
             setLoading(false);
-            navigate('/payment');
+            toast.success('Agreement signed successfully!');
+            const redirectPath = carId ? `/payment?carId=${carId}` : '/payment';
+            navigate(redirectPath);
         }, 1000);
     };
 
@@ -104,7 +109,7 @@ const Agreement = () => {
                         </div>
 
                         <div className="flex justify-end gap-4 pt-4">
-                            <Button type="button" variant="outline" onClick={() => navigate('/upload-docs')} className="w-auto px-8 py-3 rounded-xl">
+                            <Button type="button" variant="outline" onClick={() => navigate(carId ? `/upload-docs?carId=${carId}` : '/upload-docs')} className="w-auto px-8 py-3 rounded-xl">
                                 Back
                             </Button>
                             <Button type="submit" isLoading={loading} disabled={!signature || !agreed} className="w-auto px-8 py-3 rounded-xl font-bold shadow-md">

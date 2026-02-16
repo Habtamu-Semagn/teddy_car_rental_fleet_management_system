@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './components/theme-provider';
 import Layout from './components/Layout';
+import { Toaster } from 'sonner';
 
 // Placeholder Pages
 import Home from './pages/Home';
@@ -11,6 +12,7 @@ import UploadDocs from './pages/UploadDocs';
 import Agreement from './pages/Agreement';
 import Payment from './pages/Payment';
 import Confirmation from './pages/Confirmation';
+import MyBookings from './pages/MyBookings';
 
 import Logout from './pages/Logout';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -27,40 +29,77 @@ import EmployeeCars from './pages/employee/EmployeeCars';
 import EmployeePackages from './pages/employee/EmployeePackages';
 import EmployeeReports from './pages/employee/EmployeeReports';
 
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+
 function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="teddy-ui-theme">
-      <BrowserRouter>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/upload-docs" element={<UploadDocs />} />
-            <Route path="/agreement" element={<Agreement />} />
-            <Route path="/payment" element={<Payment />} />
-            <Route path="/confirmation" element={<Confirmation />} />
-            <Route path="/logout" element={<Logout />} />
-          </Route>
+      <Toaster position="top-center" richColors />
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-          {/* Admin Routes */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/cars" element={<AdminCars />} />
-          <Route path="/admin/employees" element={<AdminEmployees />} />
-          <Route path="/admin/packages" element={<AdminPackages />} />
-          <Route path="/admin/financials" element={<AdminFinancials />} />
-          <Route path="/admin/logout" element={<AdminLogout />} />
+              <Route path="/upload-docs" element={
+                <ProtectedRoute roles={['CUSTOMER']}><UploadDocs /></ProtectedRoute>
+              } />
+              <Route path="/agreement" element={
+                <ProtectedRoute roles={['CUSTOMER']}><Agreement /></ProtectedRoute>
+              } />
+              <Route path="/payment" element={
+                <ProtectedRoute roles={['CUSTOMER']}><Payment /></ProtectedRoute>
+              } />
+              <Route path="/confirmation" element={
+                <ProtectedRoute roles={['CUSTOMER']}><Confirmation /></ProtectedRoute>
+              } />
+              <Route path="/my-bookings" element={
+                <ProtectedRoute roles={['CUSTOMER']}><MyBookings /></ProtectedRoute>
+              } />
+              <Route path="/logout" element={<Logout />} />
+            </Route>
 
-          {/* Employee Routes */}
-          <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
-          <Route path="/employee/cars" element={<EmployeeCars />} />
-          <Route path="/employee/packages" element={<EmployeePackages />} />
-          <Route path="/employee/reports" element={<EmployeeReports />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Admin Routes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={
+              <ProtectedRoute roles={['ADMIN']}><AdminDashboard /></ProtectedRoute>
+            } />
+            <Route path="/admin/cars" element={
+              <ProtectedRoute roles={['ADMIN']}><AdminCars /></ProtectedRoute>
+            } />
+            <Route path="/admin/employees" element={
+              <ProtectedRoute roles={['ADMIN']}><AdminEmployees /></ProtectedRoute>
+            } />
+            <Route path="/admin/packages" element={
+              <ProtectedRoute roles={['ADMIN']}><AdminPackages /></ProtectedRoute>
+            } />
+            <Route path="/admin/financials" element={
+              <ProtectedRoute roles={['ADMIN']}><AdminFinancials /></ProtectedRoute>
+            } />
+            <Route path="/admin/logout" element={<AdminLogout />} />
+
+            {/* Employee Routes */}
+            <Route path="/employee/dashboard" element={
+              <ProtectedRoute roles={['EMPLOYEE', 'ADMIN']}><EmployeeDashboard /></ProtectedRoute>
+            } />
+            <Route path="/employee/cars" element={
+              <ProtectedRoute roles={['EMPLOYEE', 'ADMIN']}><EmployeeCars /></ProtectedRoute>
+            } />
+            <Route path="/employee/packages" element={
+              <ProtectedRoute roles={['EMPLOYEE', 'ADMIN']}><EmployeePackages /></ProtectedRoute>
+            } />
+            <Route path="/employee/reports" element={
+              <ProtectedRoute roles={['EMPLOYEE', 'ADMIN']}><EmployeeReports /></ProtectedRoute>
+            } />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
+
 
 export default App;

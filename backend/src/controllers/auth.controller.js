@@ -117,9 +117,35 @@ const getProfile = async (req, res) => {
     }
 };
 
+const updateProfile = async (req, res) => {
+    try {
+        const { idCardUrl, driverLicenseUrl, address, phoneNumber } = req.body;
+        const userId = req.user.id;
+
+        const updatedProfile = await prisma.customerProfile.update({
+            where: { userId },
+            data: {
+                idCardUrl,
+                driverLicenseUrl,
+                address,
+                phoneNumber
+            }
+        });
+
+        res.json({
+            message: 'Profile updated successfully',
+            profile: updatedProfile
+        });
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 module.exports = {
     register,
     login,
     logout,
-    getProfile
+    getProfile,
+    updateProfile
 };

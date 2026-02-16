@@ -1,41 +1,126 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Button from '../components/Button';
-import { CreditCard, Wallet, Smartphone, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CreditCard, Wallet, Smartphone, ShieldCheck, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { api } from '@/api';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 const Payment = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [fetching, setFetching] = useState(true);
+    const [car, setCar] = useState(null);
+    const [packages, setPackages] = useState([]);
 
-    // Mock booking data
-    const bookingSummary = {
-        car: 'Toyota Corolla 2021',
-        duration: '3 Days',
-        rate: 1500,
-        rentalFee: 4500,
-        insurance: 1000,
-        total: 5500
-    };
+    // Payment State
+    const [paymentMethod, setPaymentMethod] = useState('TELEBIRR'); // 'TELEBIRR' or 'CBE'
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [accountNumber, setAccountNumber] = useState('');
+    const [transactionNumber, setTransactionNumber] = useState('');
 
-    const handlePayment = () => {
+    const carId = searchParams.get('carId');
+
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!carId) {
+                navigate('/');
+                return;
+            }
+            try {
+                const [carData, packagesData] = await Promise.all([
+                    api.get(`/cars/${carId}`),
+                    api.get('/packages')
+                ]);
+                setCar(carData);
+                setPackages(packagesData);
+            } catch (error) {
+                console.error('Failed to fetch payment data:', error);
+            } finally {
+                setFetching(false);
+            }
+        };
+        fetchData();
+    }, [carId, navigate]);
+
+    // Calculate totals from session storage dates
+    const sDateStr = sessionStorage.getItem('startDate');
+    const eDateStr = sessionStorage.getItem('endDate');
+
+    let durationDays = 3; // Fallback
+    if (sDateStr && eDateStr) {
+        const start = new Date(sDateStr);
+        const end = new Date(eDateStr);
+        const diffTime = Math.abs(end - start);
+        durationDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+    }
+
+    const insuranceFee = 1000;
+    const rentalFee = car ? car.dailyRate * durationDays : 0;
+    const total = rentalFee + insuranceFee;
+
+    const handlePayment = async () => {
+        // Validation
+        if (paymentMethod === 'TELEBIRR') {
+            if (!phoneNumber || !transactionNumber) {
+                toast.error('Please enter your Telebirr number and transaction number');
+                return;
+            }
+        } else if (paymentMethod === 'CBE') {
+            if (!accountNumber || !transactionNumber) {
+                toast.error('Please enter your CBE account number and transaction number');
+                return;
+            }
+        }
+
         setLoading(true);
-        // Simulate payment processing
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            const payload = {
+                carId: parseInt(carId),
+                packageId: packages[0]?.id || 1, // Fallback to first package for demo
+                startDate: sDateStr ? new Date(sDateStr).toISOString() : new Date().toISOString(),
+                endDate: eDateStr ? new Date(eDateStr).toISOString() : new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString(),
+                totalAmount: total,
+                idCardUrl: sessionStorage.getItem('idCardUrl') || user?.profile?.idCardUrl,
+                driverLicenseUrl: sessionStorage.getItem('licenseUrl') || user?.profile?.driverLicenseUrl,
+                paymentDetails: {
+                    method: paymentMethod,
+                    phoneNumber: paymentMethod === 'TELEBIRR' ? phoneNumber : null,
+                    accountNumber: paymentMethod === 'CBE' ? accountNumber : null,
+                    transactionNumber: transactionNumber
+                }
+            };
+
+            const response = await api.post('/bookings', payload);
+            sessionStorage.setItem('lastBookingId', response.id);
+            toast.success('Booking processed successfully!');
             navigate('/confirmation');
-        }, 2000);
+        } catch (error) {
+            toast.error(error.message || 'Failed to process booking');
+        } finally {
+            setLoading(false);
+        }
     };
+
+    if (fetching) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <Loader2 className="animate-spin text-primary h-12 w-12" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl mx-auto">
                 <div className="text-center mb-10">
                     <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Secure Payment</h1>
-                    <p className="mt-2 text-gray-500">Complete your booking securely.</p>
+                    <p className="mt-2 text-gray-500">Complete your booking securely by choosing your preferred payment method.</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Order Summary - Proximity: Grouped details, Contrast: Clear hierarchy */}
                     <div className="lg:col-span-1">
                         <div className="bg-white shadow-lg rounded-2xl overflow-hidden border border-gray-100 sticky top-24">
                             <div className="px-6 py-5 bg-gray-900 text-white border-b border-gray-800">
@@ -47,27 +132,27 @@ const Payment = () => {
                             <div className="p-6 space-y-5">
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-500 font-medium">Vehicle</span>
-                                    <span className="font-bold text-gray-900">{bookingSummary.car}</span>
+                                    <span className="font-bold text-gray-900">{car?.make} {car?.model}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                     <span className="text-gray-500 font-medium">Duration</span>
-                                    <span className="font-bold text-gray-900">{bookingSummary.duration}</span>
+                                    <span className="font-bold text-gray-900">{durationDays} Days</span>
                                 </div>
 
                                 <div className="border-t border-dashed border-gray-200 pt-4 space-y-3">
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Rental Fee</span>
-                                        <span className="font-medium">{bookingSummary.rentalFee} ETB</span>
+                                        <span className="text-gray-600">Rental Fee ({car?.dailyRate} x {durationDays})</span>
+                                        <span className="font-medium">{Number(rentalFee).toLocaleString()} ETB</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-gray-600">Insurance (Refundable)</span>
-                                        <span className="font-medium">{bookingSummary.insurance} ETB</span>
+                                        <span className="font-medium">{insuranceFee.toLocaleString()} ETB</span>
                                     </div>
                                 </div>
 
                                 <div className="border-t border-gray-100 pt-4 flex justify-between items-end">
                                     <span className="text-lg font-bold text-gray-900">Total</span>
-                                    <span className="text-3xl font-extrabold text-primary">{bookingSummary.total} <span className="text-sm text-gray-500 font-medium">ETB</span></span>
+                                    <span className="text-3xl font-extrabold text-primary">{total.toLocaleString()} <span className="text-sm text-gray-500 font-medium">ETB</span></span>
                                 </div>
                             </div>
                             <div className="bg-gray-50 px-6 py-3 text-xs text-gray-500 text-center border-t border-gray-100">
@@ -76,68 +161,109 @@ const Payment = () => {
                         </div>
                     </div>
 
-                    {/* Payment Methods */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white shadow-lg rounded-2xl border border-gray-100 p-8">
                             <h3 className="text-xl font-bold text-gray-900 mb-6">Choose Payment Method</h3>
 
-                            <div className="space-y-4">
-                                {/* Telebirr Option - Design: Active state card */}
-                                <div className="border-2 border-primary bg-primary/5 rounded-xl p-5 flex items-center justify-between cursor-pointer transition-all shadow-sm ring-1 ring-primary/20 relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-2">
-                                        <span className="bg-primary text-xs font-bold px-2 py-1 rounded text-white">RECOMMENDED</span>
-                                    </div>
-                                    <div className="flex items-center space-x-5">
-                                        <div className="bg-white p-3 rounded-xl border border-primary/20 shadow-sm">
-                                            <Smartphone className="text-primary" size={28} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Telebirr Option */}
+                                <div
+                                    onClick={() => setPaymentMethod('TELEBIRR')}
+                                    className={`relative p-5 rounded-xl border-2 transition-all cursor-pointer ${paymentMethod === 'TELEBIRR' ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-gray-100 hover:border-gray-200 bg-white'}`}
+                                >
+                                    {paymentMethod === 'TELEBIRR' && (
+                                        <div className="absolute top-3 right-3 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                                            <div className="h-2 w-2 rounded-full bg-white" />
+                                        </div>
+                                    )}
+                                    <div className="flex items-center space-x-4">
+                                        <div className={`p-3 rounded-xl ${paymentMethod === 'TELEBIRR' ? 'bg-white shadow-sm' : 'bg-gray-50'}`}>
+                                            <Smartphone className={paymentMethod === 'TELEBIRR' ? 'text-primary' : 'text-gray-400'} size={24} />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-gray-900 text-lg">Telebirr</h4>
-                                            <p className="text-sm text-gray-600">Mobile Money Transfer</p>
+                                            <h4 className="font-bold text-gray-900">Telebirr</h4>
+                                            <p className="text-xs text-gray-500">Mobile Transfer</p>
                                         </div>
-                                    </div>
-                                    <div className="h-6 w-6 rounded-full border-2 border-primary flex items-center justify-center bg-white">
-                                        <div className="h-3 w-3 rounded-full bg-primary" />
                                     </div>
                                 </div>
 
-                                {/* Mock other options disabled */}
-                                <div className="border border-gray-200 rounded-xl p-5 flex items-center justify-between opacity-50 cursor-not-allowed grayscale bg-gray-50">
-                                    <div className="flex items-center space-x-5">
-                                        <div className="bg-white p-3 rounded-xl border border-gray-200">
-                                            <CreditCard className="text-gray-400" size={28} />
+                                {/* CBE Option */}
+                                <div
+                                    onClick={() => setPaymentMethod('CBE')}
+                                    className={`relative p-5 rounded-xl border-2 transition-all cursor-pointer ${paymentMethod === 'CBE' ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-gray-100 hover:border-gray-200 bg-white'}`}
+                                >
+                                    {paymentMethod === 'CBE' && (
+                                        <div className="absolute top-3 right-3 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                                            <div className="h-2 w-2 rounded-full bg-white" />
+                                        </div>
+                                    )}
+                                    <div className="flex items-center space-x-4">
+                                        <div className={`p-3 rounded-xl ${paymentMethod === 'CBE' ? 'bg-white shadow-sm' : 'bg-gray-50'}`}>
+                                            <Wallet className={paymentMethod === 'CBE' ? 'text-primary' : 'text-gray-400'} size={24} />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-gray-900 text-lg">Credit / Debit Card</h4>
-                                            <p className="text-sm text-gray-500">Currently unavailable</p>
+                                            <h4 className="font-bold text-gray-900">CBE</h4>
+                                            <p className="text-xs text-gray-500">Commercial Bank</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="mt-8 space-y-6 pt-6 border-t border-gray-100">
-                                <div>
-                                    <label htmlFor="phone" className="block text-sm font-bold text-gray-900 mb-2">Telebirr Mobile Number</label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                            <span className="text-gray-500 font-medium">+251</span>
+                                {paymentMethod === 'TELEBIRR' ? (
+                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <label htmlFor="phone" className="block text-sm font-bold text-gray-900 mb-2">Telebirr Mobile Number</label>
+                                        <div className="relative mb-4">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <span className="text-gray-500 font-medium">+251</span>
+                                            </div>
+                                            <input
+                                                type="tel"
+                                                id="phone"
+                                                required
+                                                value={phoneNumber}
+                                                onChange={(e) => setPhoneNumber(e.target.value)}
+                                                className="block w-full pl-16 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-900"
+                                                placeholder="911 234 567"
+                                            />
                                         </div>
+                                    </div>
+                                ) : (
+                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <label htmlFor="account" className="block text-sm font-bold text-gray-900 mb-2">CBE Account Number</label>
                                         <input
-                                            type="tel"
-                                            id="phone"
-                                            className="block w-full pl-16 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-900"
-                                            placeholder="911 234 567"
+                                            type="text"
+                                            id="account"
+                                            required
+                                            value={accountNumber}
+                                            onChange={(e) => setAccountNumber(e.target.value)}
+                                            className="block w-full px-4 py-3 mb-4 border border-gray-300 rounded-xl focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-900"
+                                            placeholder="1000123456789"
                                         />
                                     </div>
-                                    <p className="mt-2 text-xs text-gray-500">You will receive a prompt on your phone to authorize the payment.</p>
+                                )}
+
+                                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <label htmlFor="transaction" className="block text-sm font-bold text-gray-900 mb-2">Transaction Number / Reference</label>
+                                    <input
+                                        type="text"
+                                        id="transaction"
+                                        required
+                                        value={transactionNumber}
+                                        onChange={(e) => setTransactionNumber(e.target.value)}
+                                        className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-900"
+                                        placeholder="Enter payment reference number"
+                                    />
+                                    <p className="mt-2 text-xs text-gray-500 italic">Please enter the confirmation code from your payment receipt.</p>
                                 </div>
 
-                                <div className="flex justify-end gap-3 pt-4">
-                                    <Button variant="outline" onClick={() => navigate('/agreement')} className="w-auto px-6 py-3 rounded-xl">
+                                <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                                    <Button variant="outline" onClick={() => navigate(-1)} className="w-full sm:w-auto px-6 py-3 rounded-xl">
                                         Back
                                     </Button>
-                                    <Button onClick={handlePayment} isLoading={loading} className="w-auto px-8 py-3 rounded-xl text-lg shadow-lg hover:shadow-primary/40">
-                                        Pay {bookingSummary.total} ETB
+                                    <Button onClick={handlePayment} disabled={loading} className="w-full sm:w-auto px-8 py-3 rounded-xl text-lg shadow-lg hover:shadow-primary/40">
+                                        {loading ? <Loader2 className="animate-spin mr-2" /> : null}
+                                        Pay {total.toLocaleString()} ETB
                                     </Button>
                                 </div>
                             </div>

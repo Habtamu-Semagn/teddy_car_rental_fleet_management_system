@@ -1,30 +1,60 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Button from '../components/Button';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 const Login = () => {
     const navigate = useNavigate();
+    const { login } = useAuth();
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
-        // Mock Login
-        setTimeout(() => {
-            if (formData.email === 'customer@test.com' && formData.password === 'password') {
-                navigate('/upload-docs'); // Proceed to next step
-            } else if (formData.email === 'admin@teddy.com') {
-                setError('Please use the Employee Login portal for staff access.');
+        try {
+            const user = await login(formData.email, formData.password);
+
+            const params = new URLSearchParams(window.location.search);
+            const carId = params.get('carId');
+
+            // Redirect based on role
+            if (user.role === 'ADMIN') {
+                navigate('/admin/dashboard');
+            } else if (user.role === 'EMPLOYEE') {
+                navigate('/employee/dashboard');
             } else {
-                setError('Invalid credentials. Try customer@test.com / password');
+                const hasDocs = user.profile?.idCardUrl && user.profile?.driverLicenseUrl;
+
+                if (carId) {
+                    // During booking flow
+                    if (hasDocs) {
+                        navigate(`/agreement?carId=${carId}`);
+                    } else {
+                        navigate(`/upload-docs?carId=${carId}`);
+                    }
+                } else {
+                    // General login
+                    if (hasDocs) {
+                        navigate('/');
+                    } else {
+                        navigate('/upload-docs');
+                    }
+                }
             }
+        } catch (err) {
+            const msg = err.message || 'Invalid email or password';
+            setError(msg);
+            toast.error(msg);
+        } finally {
             setLoading(false);
-        }, 1000);
+        }
     };
+
 
     return (
         <div className="min-h-[85vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">

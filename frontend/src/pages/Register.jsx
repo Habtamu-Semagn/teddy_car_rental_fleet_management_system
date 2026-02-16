@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Button from '../components/Button';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '../context/AuthContext';
+import { toast } from 'sonner';
 
 const Register = () => {
     const navigate = useNavigate();
+    const { register } = useAuth();
     const [formData, setFormData] = useState({
-        fullName: '',
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
         password: '',
@@ -14,7 +18,7 @@ const Register = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
@@ -25,12 +29,33 @@ const Register = () => {
 
         setLoading(true);
 
-        // Mock Registration
-        setTimeout(() => {
+        try {
+            const user = await register({
+                email: formData.email,
+                password: formData.password,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                phoneNumber: formData.phone,
+                role: 'CUSTOMER'
+            });
+
+            const params = new URLSearchParams(window.location.search);
+            const carId = params.get('carId');
+
+            if (carId) {
+                navigate(`/upload-docs?carId=${carId}`);
+            } else {
+                navigate('/upload-docs');
+            }
+        } catch (err) {
+            const msg = err.message || 'Registration failed';
+            setError(msg);
+            toast.error(msg);
+        } finally {
             setLoading(false);
-            navigate('/upload-docs'); // Proceed to document upload
-        }, 1500);
+        }
     };
+
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -64,19 +89,35 @@ const Register = () => {
                             </div>
                         )}
 
-                        <div>
-                            <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700 mb-1">
-                                Full Name
-                            </label>
-                            <input
-                                id="fullName"
-                                name="fullName"
-                                type="text"
-                                required
-                                className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
-                                value={formData.fullName}
-                                onChange={handleChange}
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label htmlFor="firstName" className="block text-sm font-semibold text-gray-700 mb-1">
+                                    First Name
+                                </label>
+                                <input
+                                    id="firstName"
+                                    name="firstName"
+                                    type="text"
+                                    required
+                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                    value={formData.firstName}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="lastName" className="block text-sm font-semibold text-gray-700 mb-1">
+                                    Last Name
+                                </label>
+                                <input
+                                    id="lastName"
+                                    name="lastName"
+                                    type="text"
+                                    required
+                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                    value={formData.lastName}
+                                    onChange={handleChange}
+                                />
+                            </div>
                         </div>
 
                         <div>

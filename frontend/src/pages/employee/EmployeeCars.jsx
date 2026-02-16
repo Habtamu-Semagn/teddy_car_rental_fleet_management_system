@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    Car, Eye, Settings, Calendar, Search as SearchIcon
+    Car, Eye, Settings, Calendar, Search as SearchIcon, Loader2
 } from 'lucide-react';
 
 // Shadcn Components
@@ -34,6 +34,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import EmployeeLayout from "@/components/employee-layout";
+import { api } from "@/api";
 
 const EmployeeCars = () => {
     const [detailsModalOpen, setDetailsModalOpen] = useState(false);
@@ -41,23 +42,30 @@ const EmployeeCars = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
-    // Mock Data
-    const cars = [
-        { id: 'CAR-001', model: 'Toyota Corolla', year: 2021, plate: 'AA-12345', status: 'Available', mileage: '45,000 km', lastService: '2024-02-15', assignedTo: null },
-        { id: 'CAR-002', model: 'Hyundai Elantra', year: 2022, plate: 'AA-23456', status: 'Assigned', mileage: '32,000 km', lastService: '2024-03-01', assignedTo: 'John Doe (BR-10236)' },
-        { id: 'CAR-003', model: 'Toyota Land Cruiser', year: 2020, plate: 'AA-34567', status: 'Available', mileage: '78,000 km', lastService: '2024-01-20', assignedTo: null },
-        { id: 'CAR-004', model: 'Suzuki Dzire', year: 2023, plate: 'AA-45678', status: 'Maintenance', mileage: '15,000 km', lastService: '2024-03-10', assignedTo: null },
-        { id: 'CAR-005', model: 'Toyota Hilux', year: 2021, plate: 'AA-56789', status: 'Available', mileage: '52,000 km', lastService: '2024-02-28', assignedTo: null },
-        { id: 'CAR-006', model: 'Nissan Patrol', year: 2019, plate: 'AA-67890', status: 'Out of Service', mileage: '95,000 km', lastService: '2024-01-05', assignedTo: null },
-    ];
+    const [cars, setCars] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCars = async () => {
+            try {
+                const data = await api.get('/cars');
+                setCars(data);
+            } catch (error) {
+                console.error('Failed to fetch cars:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCars();
+    }, []);
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'Available': return <Badge className="bg-green-100 text-green-800 hover:bg-green-200 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">Available</Badge>;
-            case 'Assigned': return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">Assigned</Badge>;
-            case 'Maintenance': return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">Maintenance</Badge>;
-            case 'Out of Service': return <Badge className="bg-red-100 text-red-800 hover:bg-red-200 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">Out of Service</Badge>;
-            default: return <Badge variant="secondary">Unknown</Badge>;
+            case 'AVAILABLE': return <Badge className="bg-green-100 text-green-800 border-green-200">Available</Badge>;
+            case 'RENTED': return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Assigned</Badge>;
+            case 'MAINTENANCE': return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Maintenance</Badge>;
+            case 'UNAVAILABLE': return <Badge className="bg-red-100 text-red-800 border-red-200">Out of Service</Badge>;
+            default: return <Badge variant="secondary">{status}</Badge>;
         }
     };
 
@@ -68,15 +76,19 @@ const EmployeeCars = () => {
 
     const filteredCars = cars.filter(car => {
         const matchesSearch = car.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            car.plate.toLowerCase().includes(searchQuery.toLowerCase());
+            car.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            car.plateNumber.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = statusFilter === 'all' || car.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
 
-    const availableCount = cars.filter(c => c.status === 'Available').length;
-    const assignedCount = cars.filter(c => c.status === 'Assigned').length;
-    const maintenanceCount = cars.filter(c => c.status === 'Maintenance').length;
-    const outOfServiceCount = cars.filter(c => c.status === 'Out of Service').length;
+    const stats = {
+        available: cars.filter(c => c.status === 'AVAILABLE').length,
+        assigned: cars.filter(c => c.status === 'RENTED').length,
+        maintenance: cars.filter(c => c.status === 'MAINTENANCE').length,
+        outOfService: cars.filter(c => c.status === 'UNAVAILABLE').length
+    };
+
 
     return (
         <EmployeeLayout>
@@ -95,7 +107,7 @@ const EmployeeCars = () => {
                         <Car className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{availableCount}</div>
+                        <div className="text-2xl font-bold">{stats.available}</div>
                         <p className="text-xs text-muted-foreground mt-1 text-green-600 dark:text-green-400">
                             Ready to assign
                         </p>
@@ -107,7 +119,7 @@ const EmployeeCars = () => {
                         <Car className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{assignedCount}</div>
+                        <div className="text-2xl font-bold">{stats.assigned}</div>
                         <p className="text-xs text-muted-foreground mt-1 text-blue-600 dark:text-blue-400">
                             Currently in use
                         </p>
@@ -119,7 +131,7 @@ const EmployeeCars = () => {
                         <Settings className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{maintenanceCount}</div>
+                        <div className="text-2xl font-bold">{stats.maintenance}</div>
                         <p className="text-xs text-muted-foreground mt-1 text-yellow-600 dark:text-yellow-400">
                             Under service
                         </p>
@@ -131,7 +143,7 @@ const EmployeeCars = () => {
                         <Settings className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{outOfServiceCount}</div>
+                        <div className="text-2xl font-bold">{stats.outOfService}</div>
                         <p className="text-xs text-muted-foreground mt-1 text-red-600 dark:text-red-400">
                             Not operational
                         </p>
@@ -165,10 +177,10 @@ const EmployeeCars = () => {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">All Status</SelectItem>
-                                        <SelectItem value="Available">Available</SelectItem>
-                                        <SelectItem value="Assigned">Assigned</SelectItem>
-                                        <SelectItem value="Maintenance">Maintenance</SelectItem>
-                                        <SelectItem value="Out of Service">Out of Service</SelectItem>
+                                        <SelectItem value="AVAILABLE">Available</SelectItem>
+                                        <SelectItem value="RENTED">Assigned</SelectItem>
+                                        <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                                        <SelectItem value="UNAVAILABLE">Out of Service</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -180,25 +192,47 @@ const EmployeeCars = () => {
                             <Table>
                                 <TableHeader className="bg-muted/40">
                                     <TableRow>
-                                        <TableHead className="w-[100px]">ID</TableHead>
-                                        <TableHead>Model</TableHead>
-                                        <TableHead>Year</TableHead>
+                                        <TableHead className="w-[80px]">ID</TableHead>
+                                        <TableHead>Vehicle</TableHead>
+                                        <TableHead>Category</TableHead>
                                         <TableHead>Plate</TableHead>
-                                        <TableHead>Mileage</TableHead>
-                                        <TableHead>Last Service</TableHead>
+                                        <TableHead>Daily Rate</TableHead>
                                         <TableHead>Status</TableHead>
                                         <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
+                                    {loading && (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center py-10">
+                                                <Loader2 className="animate-spin inline-block mr-2" />
+                                                Loading fleet data...
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                    {!loading && filteredCars.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                                                No cars found matching your criteria.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                     {filteredCars.map((car) => (
                                         <TableRow key={car.id}>
-                                            <TableCell className="font-mono font-medium text-xs">{car.id}</TableCell>
-                                            <TableCell className="font-medium">{car.model}</TableCell>
-                                            <TableCell>{car.year}</TableCell>
-                                            <TableCell className="font-mono text-xs">{car.plate}</TableCell>
-                                            <TableCell className="text-muted-foreground">{car.mileage}</TableCell>
-                                            <TableCell className="text-muted-foreground">{car.lastService}</TableCell>
+                                            <TableCell className="font-mono font-medium text-xs">#{car.id}</TableCell>
+                                            <TableCell>
+                                                <div className="font-medium">{car.make} {car.model}</div>
+                                                <div className="text-[10px] text-muted-foreground">{car.year}</div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className="text-[10px] font-normal">
+                                                    {car.category}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs">{car.plateNumber}</TableCell>
+                                            <TableCell className="text-sm font-semibold">
+                                                ETB {Number(car.dailyRate).toLocaleString()}
+                                            </TableCell>
                                             <TableCell>{getStatusBadge(car.status)}</TableCell>
                                             <TableCell className="text-right">
                                                 <Button
@@ -216,6 +250,7 @@ const EmployeeCars = () => {
                             </Table>
                         </ScrollArea>
                     </TabsContent>
+
 
                     <TabsContent value="calendar" className="p-6">
                         <div className="flex items-center justify-center h-[400px] border-2 border-dashed border-border rounded-lg">
@@ -263,8 +298,8 @@ const EmployeeCars = () => {
                     <div className="space-y-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Model</p>
-                                <p className="text-sm font-semibold">{selectedCar?.model}</p>
+                                <p className="text-sm font-medium text-muted-foreground">Make & Model</p>
+                                <p className="text-sm font-semibold">{selectedCar?.make} {selectedCar?.model}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Year</p>
@@ -272,28 +307,33 @@ const EmployeeCars = () => {
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Plate Number</p>
-                                <p className="text-sm font-semibold font-mono">{selectedCar?.plate}</p>
+                                <p className="text-sm font-semibold font-mono">{selectedCar?.plateNumber}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Category</p>
+                                <p className="text-sm font-semibold">{selectedCar?.category}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-muted-foreground">Daily Rate</p>
+                                <p className="text-sm font-semibold text-primary">ETB {Number(selectedCar?.dailyRate).toLocaleString()}</p>
                             </div>
                             <div>
                                 <p className="text-sm font-medium text-muted-foreground">Status</p>
                                 {selectedCar && getStatusBadge(selectedCar.status)}
                             </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Mileage</p>
-                                <p className="text-sm font-semibold">{selectedCar?.mileage}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Last Service</p>
-                                <p className="text-sm font-semibold">{selectedCar?.lastService}</p>
-                            </div>
                         </div>
-                        {selectedCar?.assignedTo && (
+                        {selectedCar?.features && selectedCar.features.length > 0 && (
                             <div className="pt-4 border-t">
-                                <p className="text-sm font-medium text-muted-foreground">Assigned To</p>
-                                <p className="text-sm font-semibold">{selectedCar.assignedTo}</p>
+                                <p className="text-sm font-medium text-muted-foreground mb-2">Features</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {selectedCar.features.map((f, i) => (
+                                        <Badge key={i} variant="secondary" className="text-[10px]">{f}</Badge>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>
+
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDetailsModalOpen(false)}>Close</Button>
                     </DialogFooter>

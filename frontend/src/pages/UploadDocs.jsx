@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Button from '../components/Button';
-import { Upload, FileText, CheckCircle } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { api } from '@/api';
+import { toast } from 'sonner';
 
 const UploadDocs = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [files, setFiles] = useState({ idCard: null, license: null });
+    const carId = searchParams.get('carId');
 
     const handleFileChange = (e, type) => {
         const file = e.target.files[0];
@@ -15,82 +19,148 @@ const UploadDocs = () => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const uploadFile = async (file) => {
+        const formData = new FormData();
+        formData.append('document', file);
+        const response = await api.upload('/upload/document', formData);
+        return response.url;
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!files.idCard || !files.license) return;
 
         setLoading(true);
-        // Simulate upload
-        setTimeout(() => {
+        try {
+            // Upload ID Card & License
+            const [idCardUrl, licenseUrl] = await Promise.all([
+                uploadFile(files.idCard),
+                uploadFile(files.license)
+            ]);
+
+            // Persist to backend profile
+            await api.patch('/auth/profile', {
+                idCardUrl,
+                driverLicenseUrl: licenseUrl
+            });
+
+            // Store URLs in session storage for the final booking step (as fallback)
+            sessionStorage.setItem('idCardUrl', idCardUrl);
+            sessionStorage.setItem('licenseUrl', licenseUrl);
+
+            if (carId) {
+                navigate(`/agreement?carId=${carId}`);
+            } else {
+                toast.success('Documents uploaded successfully!');
+                navigate('/');
+            }
+        } catch (error) {
+            toast.error(error.message || 'Failed to upload documents. Please try again.');
+        } finally {
             setLoading(false);
-            navigate('/agreement');
-        }, 1500);
+        }
     };
 
     return (
         <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-                <h2 className="text-3xl font-extrabold text-gray-900">Verify Your Identity</h2>
-                <p className="mt-4 text-lg text-gray-600">
-                    To ensure safety and compliance, please upload your valid identification documents.
-                </p>
+                <h2 className="text-3xl font-extrabold text-gray-900 font-display">Verify Your Identity</h2>
+                <div className="mt-4 flex flex-col items-center">
+                    <div className="h-1.5 w-24 bg-primary rounded-full mb-4"></div>
+                    <p className="text-lg text-gray-600">
+                        To ensure safety and compliance, please upload your valid identification documents.
+                    </p>
+                </div>
             </div>
 
-            <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
-                <div className="px-4 py-5 sm:p-6">
-                    <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="bg-white shadow-xl border border-gray-100 sm:rounded-2xl mb-8 overflow-hidden">
+                <div className="px-4 py-8 sm:p-10">
+                    <form onSubmit={handleSubmit} className="space-y-10">
                         {/* ID Card Upload */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">National ID / Passport</label>
-                            <div className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${files.idCard ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'}`}>
-                                <div className="space-y-1 text-center">
-                                    {files.idCard ? (
-                                        <CheckCircle className="mx-auto h-12 w-12 text-primary" />
-                                    ) : (
-                                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                                    )}
-                                    <div className="flex text-sm text-gray-600 justify-center">
-                                        <label htmlFor="id-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-opacity-80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary px-2">
-                                            <span>{files.idCard ? files.idCard.name : 'Upload a file'}</span>
+                            <div className="flex items-center justify-between mb-4">
+                                <label className="block text-sm font-semibold text-gray-800">National ID / Passport</label>
+                                {files.idCard && <span className="text-xs text-emerald-600 font-medium flex items-center gap-1"><CheckCircle size={14} /> Ready to upload</span>}
+                            </div>
+                            <div className={`mt-1 flex justify-center px-6 pt-10 pb-10 border-2 border-dashed rounded-xl transition-all duration-300 ${files.idCard ? 'border-primary bg-primary/5 shadow-inner' : 'border-gray-300 hover:border-primary/50 hover:bg-gray-50'}`}>
+                                <div className="space-y-4 text-center">
+                                    <div className="relative inline-flex items-center justify-center">
+                                        {files.idCard ? (
+                                            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary animate-in zoom-in-50">
+                                                <CheckCircle className="h-10 w-10 animate-bounce" />
+                                            </div>
+                                        ) : (
+                                            <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                                                <Upload className="h-10 w-10" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col text-sm text-gray-600">
+                                        <label htmlFor="id-upload" className="relative cursor-pointer bg-primary text-white font-semibold py-2 px-6 rounded-lg hover:bg-primary/90 focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-md hover:shadow-lg inline-block mx-auto mb-2">
+                                            <span>{files.idCard ? 'Change File' : 'Select ID Card'}</span>
                                             <input id="id-upload" name="id-upload" type="file" className="sr-only" onChange={(e) => handleFileChange(e, 'idCard')} accept="image/*,.pdf" />
                                         </label>
+                                        <p className="text-gray-500 font-medium">{files.idCard ? files.idCard.name : 'or drag and drop'}</p>
                                     </div>
-                                    {!files.idCard && <p className="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>}
+                                    {!files.idCard && <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">PNG, JPG, PDF up to 10MB</p>}
                                 </div>
                             </div>
                         </div>
 
                         {/* License Upload */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Driver's License</label>
-                            <div className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${files.license ? 'border-primary bg-primary/5' : 'border-gray-300 hover:border-primary'}`}>
-                                <div className="space-y-1 text-center">
-                                    {files.license ? (
-                                        <CheckCircle className="mx-auto h-12 w-12 text-primary" />
-                                    ) : (
-                                        <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                                    )}
-                                    <div className="flex text-sm text-gray-600 justify-center">
-                                        <label htmlFor="license-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-opacity-80 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary px-2">
-                                            <span>{files.license ? files.license.name : 'Upload a file'}</span>
+                            <div className="flex items-center justify-between mb-4">
+                                <label className="block text-sm font-semibold text-gray-800">Driver's License</label>
+                                {files.license && <span className="text-xs text-emerald-600 font-medium flex items-center gap-1"><CheckCircle size={14} /> Ready to upload</span>}
+                            </div>
+                            <div className={`mt-1 flex justify-center px-6 pt-10 pb-10 border-2 border-dashed rounded-xl transition-all duration-300 ${files.license ? 'border-primary bg-primary/5 shadow-inner' : 'border-gray-300 hover:border-primary/50 hover:bg-gray-50'}`}>
+                                <div className="space-y-4 text-center">
+                                    <div className="relative inline-flex items-center justify-center">
+                                        {files.license ? (
+                                            <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-primary animate-in zoom-in-50">
+                                                <CheckCircle className="h-10 w-10 animate-bounce" />
+                                            </div>
+                                        ) : (
+                                            <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                                                <FileText className="h-10 w-10" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col text-sm text-gray-600">
+                                        <label htmlFor="license-upload" className="relative cursor-pointer bg-primary text-white font-semibold py-2 px-6 rounded-lg hover:bg-primary/90 focus-within:ring-2 focus-within:ring-primary/20 transition-all shadow-md hover:shadow-lg inline-block mx-auto mb-2">
+                                            <span>{files.license ? 'Change File' : 'Select License'}</span>
                                             <input id="license-upload" name="license-upload" type="file" className="sr-only" onChange={(e) => handleFileChange(e, 'license')} accept="image/*,.pdf" />
                                         </label>
+                                        <p className="text-gray-500 font-medium">{files.license ? files.license.name : 'or drag and drop'}</p>
                                     </div>
-                                    {!files.license && <p className="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>}
+                                    {!files.license && <p className="text-xs text-gray-400 uppercase tracking-widest font-bold">PNG, JPG, PDF up to 10MB</p>}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-4">
-                            <Button type="button" variant="outline" onClick={() => navigate('/')} className="w-auto px-8">
-                                Cancel
+                        <div className="flex flex-col sm:flex-row justify-end gap-4 pt-4 border-t border-gray-100">
+                            <Button type="button" variant="ghost" onClick={() => navigate(-1)} className="w-full sm:w-auto px-8 py-6 text-gray-500 hover:text-gray-700">
+                                Back
                             </Button>
-                            <Button type="submit" isLoading={loading} disabled={!files.idCard || !files.license} className="w-auto px-8">
-                                Proceed to Agreement
+                            <Button type="submit" disabled={loading || !files.idCard || !files.license} className="w-full sm:w-auto px-10 py-6 text-lg shadow-xl shadow-primary/20 hover:shadow-primary/30 active:scale-95 transition-all">
+                                {loading ? (
+                                    <>
+                                        <Loader2 className="animate-spin mr-2 h-5 w-5" />
+                                        Uploading Documents...
+                                    </>
+                                ) : (
+                                    'Proceed to Agreement'
+                                )}
                             </Button>
                         </div>
                     </form>
                 </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-8 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                <div className="flex items-center gap-2"><div className="h-1 w-1 bg-gray-400 rounded-full"></div> Secure Transmission</div>
+                <div className="flex items-center gap-2"><div className="h-1 w-1 bg-gray-400 rounded-full"></div> Privacy Guaranteed</div>
+                <div className="flex items-center gap-2"><div className="h-1 w-1 bg-gray-400 rounded-full"></div> 256-bit Encryption</div>
             </div>
         </div>
     );

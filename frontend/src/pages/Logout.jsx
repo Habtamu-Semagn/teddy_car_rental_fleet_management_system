@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
-import Button from '../components/Button';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '../context/AuthContext';
 
 const Logout = () => {
+    const { logout } = useAuth();
+
     useEffect(() => {
-        // Simulate clearing session
-        localStorage.removeItem('token');
-    }, []);
+        logout();
+    }, [logout]);
+
 
     return (
         <div className="min-h-[60vh] flex items-center justify-center p-4 bg-gray-50">

@@ -1,27 +1,95 @@
-import React from 'react';
-import { Link, Outlet } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
+import { Home as HomeIcon, Info, Mail, LogIn, UserPlus, Briefcase, User, LogOut } from 'lucide-react';
+import logo from '../assets/logo.png';
+import { useAuth } from '../context/AuthContext';
 
 const Layout = () => {
+    const { user, logout, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
     return (
         <div className="min-h-screen flex flex-col font-sans">
             {/* Header */}
-            <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <Link to="/" className="text-2xl font-bold text-primary">
-                        Teddy<span className="text-black">Rental</span>
-                    </Link>
+            <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm/5">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-24 flex items-end justify-between pb-4">
 
-                    <nav className="hidden md:flex space-x-8">
-                        <Link to="/" className="text-gray-600 hover:text-primary font-medium transition-colors">Home</Link>
-                        <Link to="/about" className="text-gray-600 hover:text-primary font-medium transition-colors">About</Link>
-                        <Link to="/contact" className="text-gray-600 hover:text-primary font-medium transition-colors">Contact</Link>
-                    </nav>
-
-                    <div className="flex items-center space-x-4">
-                        <Link to="/login" className="text-gray-600 hover:text-primary font-medium">Sign In</Link>
-                        <Link to="/register" className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity">
-                            Sign Up
+                    {/* Left Group: Logo & Navigation */}
+                    <div className="flex items-end gap-16">
+                        {/* Logo Section - Left Bottom */}
+                        <Link to="/" className="flex items-center transition-transform hover:scale-105 active:scale-95 duration-200">
+                            <img src={logo} alt="Teddy Rental" className="w-24 h-10 object-contain" />
                         </Link>
+
+                        {/* Navigation - Spaced by Proximity */}
+                        <nav className="hidden lg:flex items-center gap-10 mb-1">
+                            <Link to="/" className="group flex items-center gap-2.5 text-gray-500 hover:text-gray-900 font-semibold transition-all duration-300">
+                                <HomeIcon size={18} className="group-hover:scale-110 transition-transform" />
+                                <span className="relative">
+                                    Home
+                                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
+                                </span>
+                            </Link>
+
+                            {isAuthenticated && (
+                                <Link to="/my-bookings" className="group flex items-center gap-2.5 text-gray-500 hover:text-gray-900 font-semibold transition-all duration-300">
+                                    <Briefcase size={18} className="group-hover:scale-110 transition-transform" />
+                                    <span className="relative">
+                                        My Rentals
+                                        <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
+                                    </span>
+                                </Link>
+                            )}
+
+                            <Link to="/about" className="group flex items-center gap-2.5 text-gray-500 hover:text-gray-900 font-semibold transition-all duration-300">
+                                <Info size={18} className="group-hover:scale-110 transition-transform" />
+                                <span className="relative">
+                                    About
+                                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
+                                </span>
+                            </Link>
+                        </nav>
+                    </div>
+
+                    {/* Right Group: Actions */}
+                    <div className="flex items-center gap-6 mb-1">
+                        {!isAuthenticated ? (
+                            <>
+                                <Link to="/login" className="group flex items-center gap-2 text-gray-600 hover:text-gray-900 font-bold transition-colors">
+                                    <LogIn size={18} />
+                                    Sign In
+                                </Link>
+                                <Link to="/register" className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0.5 transition-all duration-300">
+                                    <UserPlus size={18} />
+                                    Sign Up
+                                </Link>
+                            </>
+                        ) : (
+                            <div className="flex items-center gap-4">
+                                <div className="hidden sm:flex flex-col items-end mr-2">
+                                    <span className="text-sm font-bold text-gray-900">
+                                        {user?.customerProfile?.firstName || user?.email?.split('@')[0]}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none">
+                                        {user?.role}
+                                    </span>
+                                </div>
+                                <div className="h-10 w-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-primary shadow-inner group">
+                                    <User size={20} className="group-hover:scale-110 transition-transform" />
+                                </div>
+                                <button
+                                    onClick={handleLogout}
+                                    className="p-2.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all duration-300"
+                                    title="Sign Out"
+                                >
+                                    <LogOut size={20} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </header>
@@ -35,7 +103,7 @@ const Layout = () => {
             <footer className="bg-gray-900 text-white py-12">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div>
-                        <h3 className="text-xl font-bold mb-4 text-primary">TeddyRental</h3>
+                        <img src={logo} alt="Teddy Rental" className="w-20 h-20 object-contain mb-4" />
                         <p className="text-gray-400">Premium fleet management and car rental services in Ethiopia.</p>
                     </div>
                     <div>

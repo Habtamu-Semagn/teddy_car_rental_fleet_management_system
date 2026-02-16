@@ -61,6 +61,8 @@ model CustomerProfile {
   lastName    String
   phoneNumber String
   address     String?
+  idCardUrl   String?
+  driverLicenseUrl String?
 }
 
 model Car {
@@ -157,4 +159,16 @@ model AuditLog {
   action    String
   details   String?
   timestamp DateTime @default(now())
+}
+
+model Package {
+  id          Int      @id @default(autoincrement())
+  name        String
+  price       Decimal
+  period      String   // e.g., "per day", "per week", "per month"
+  features    String[]
+  category    String   // e.g., "Standard", "Popular", "Luxury"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

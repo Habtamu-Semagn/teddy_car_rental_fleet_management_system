@@ -93,19 +93,26 @@ const getAllBookings = async (req, res) => {
 const updateBookingStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
+        const { status, carId } = req.body;
         const employeeId = req.user.id;
+
+        const updateData = {
+            status,
+            processedById: employeeId,
+        };
+
+        if (carId) {
+            updateData.carId = parseInt(carId);
+        }
 
         const booking = await prisma.booking.update({
             where: { id: parseInt(id) },
-            data: {
-                status,
-                processedById: employeeId,
-            },
-            include: { user: true }
+            data: updateData,
+            include: { user: true, car: true }
         });
 
         res.json(booking);
+
     } catch (error) {
         console.error('Update booking status error:', error);
         res.status(500).json({ message: 'Internal server error' });
@@ -131,10 +138,44 @@ const assignDriver = async (req, res) => {
     }
 };
 
+const getBookingById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        const booking = await prisma.booking.findUnique({
+            where: { id: parseInt(id) },
+            include: {
+                car: true,
+                user: {
+                    include: { customerProfile: true }
+                },
+                payment: true
+            }
+        });
+
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found' });
+        }
+
+        // Security: Only owner or staff can see details
+        if (booking.userId !== userId && userRole === 'CUSTOMER') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        res.json(booking);
+    } catch (error) {
+        console.error('Get booking by id error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 module.exports = {
     createBooking,
     getMyBookings,
     getAllBookings,
     updateBookingStatus,
-    assignDriver
+    assignDriver,
+    getBookingById
 };

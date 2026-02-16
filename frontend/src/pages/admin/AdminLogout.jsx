@@ -1,13 +1,15 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
-import Button from '../../components/Button';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '../../context/AuthContext';
 
 const AdminLogout = () => {
+    const { logout } = useAuth();
+
     useEffect(() => {
-        // Simulate clearing admin session
-        localStorage.removeItem('adminToken');
-    }, []);
+        logout();
+    }, [logout]);
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 bg-gray-900">

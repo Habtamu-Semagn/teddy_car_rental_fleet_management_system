@@ -1,29 +1,37 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Button from '../../components/Button';
 import { ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '../../context/AuthContext';
 
 const AdminLogin = () => {
     const navigate = useNavigate();
-    const [formData, setFormData] = useState({ username: '', password: '' });
+    const { login } = useAuth();
+    const [formData, setFormData] = useState({ email: '', password: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError('');
 
-        setTimeout(() => {
-            // Mock validation
-            if (formData.username === 'admin' && formData.password === 'admin') {
-                navigate('/admin/dashboard');
+        try {
+            const user = await login(formData.email, formData.password);
+
+            if (user.role === 'ADMIN' || user.role === 'EMPLOYEE') {
+                const redirectPath = user.role === 'ADMIN' ? '/admin/dashboard' : '/employee/dashboard';
+                navigate(redirectPath);
             } else {
-                setError('Invalid staff credentials.');
+                setError('Unauthorized: This portal is for staff only.');
             }
+        } catch (err) {
+            setError(err.message || 'Invalid staff credentials.');
+        } finally {
             setLoading(false);
-        }, 1000);
+        }
     };
+
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -49,16 +57,16 @@ const AdminLogin = () => {
 
                     <div className="rounded-md shadow-sm -space-y-px">
                         <div>
-                            <label htmlFor="username" className="sr-only">Username</label>
+                            <label htmlFor="email" className="sr-only">Email address</label>
                             <input
-                                id="username"
-                                name="username"
-                                type="text"
+                                id="email"
+                                name="email"
+                                type="email"
                                 required
                                 className="appearance-none rounded-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
-                                placeholder="Username"
-                                value={formData.username}
-                                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                placeholder="Email address"
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             />
                         </div>
                         <div>

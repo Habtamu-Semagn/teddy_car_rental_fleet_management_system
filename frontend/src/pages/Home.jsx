@@ -1,11 +1,55 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { cars } from '../data/mockCars';
-import { Search, Filter, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { api } from '../api';
+import { Search, Filter, Calendar, Loader2, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { format } from "date-fns";
 
 const Home = () => {
+    const navigate = useNavigate();
+    const [cars, setCars] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterCategory, setFilterCategory] = useState('All');
+    const [startDate, setStartDate] = useState(() => {
+        const saved = sessionStorage.getItem('startDate');
+        return saved ? new Date(saved) : null;
+    });
+    const [endDate, setEndDate] = useState(() => {
+        const saved = sessionStorage.getItem('endDate');
+        return saved ? new Date(saved) : null;
+    });
+
+    const handleBookNow = (carId) => {
+        if (!startDate || !endDate) {
+            toast.error('Please select both Pick-up and Return dates first.');
+            window.scrollTo({ top: 300, behavior: 'smooth' }); // Scroll to search bar
+            return;
+        }
+        navigate(`/login?carId=${carId}`);
+    };
+
+    useEffect(() => {
+        const fetchCars = async () => {
+            setLoading(true);
+            try {
+                const params = {};
+                if (startDate) params.startDate = startDate.toISOString();
+                if (endDate) params.endDate = endDate.toISOString();
+
+                const data = await api.get('/cars', { params });
+                setCars(data);
+            } catch (error) {
+                console.error('Failed to fetch cars:', error);
+                toast.error('Failed to update fleet availability');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCars();
+    }, [startDate, endDate]);
 
     const filteredCars = cars.filter(car => {
         const matchesSearch = `${car.make} ${car.model}`.toLowerCase().includes(searchTerm.toLowerCase());
@@ -47,19 +91,19 @@ const Home = () => {
 
             {/* Search & Filter - Proximity: Grouped controls, Alignment: Center aligned within container */}
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 -mt-24 relative z-20">
-                <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-4 items-center ring-1 ring-gray-100">
-                    <div className="md:col-span-5 relative group">
+                <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6 items-center ring-1 ring-gray-100">
+                    <div className="lg:col-span-3 relative group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={20} />
                         <input
                             type="text"
-                            placeholder="Search make or model..."
+                            placeholder="Make or model..."
                             className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50 focus:bg-white"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
 
-                    <div className="md:col-span-4 relative group">
+                    <div className="lg:col-span-2 relative group">
                         <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={20} />
                         <select
                             className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none appearance-none bg-gray-50 focus:bg-white cursor-pointer"
@@ -70,11 +114,46 @@ const Home = () => {
                         </select>
                     </div>
 
-                    <div className="md:col-span-3">
-                        <button className="w-full bg-gray-900 text-white rounded-xl py-4 font-bold hover:bg-black transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 transform active:scale-95">
-                            <Calendar size={20} />
-                            Check Availability
-                        </button>
+                    <div className="lg:col-span-3 relative group">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary z-10 pointer-events-none" size={20} />
+                        <DatePicker
+                            selected={startDate}
+                            onChange={(date) => {
+                                setStartDate(date);
+                                if (date) sessionStorage.setItem('startDate', date.toISOString());
+                            }}
+                            selectsStart
+                            startDate={startDate}
+                            endDate={endDate}
+                            minDate={new Date()}
+                            placeholderText="Pick-up Date"
+                            className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50 focus:bg-white text-gray-700 font-medium"
+                        />
+                        <span className="absolute -top-2 left-4 bg-white px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider z-10">Pick-up</span>
+                    </div>
+
+                    <div className="lg:col-span-3 relative group">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary z-10 pointer-events-none" size={20} />
+                        <DatePicker
+                            selected={endDate}
+                            onChange={(date) => {
+                                setEndDate(date);
+                                if (date) sessionStorage.setItem('endDate', date.toISOString());
+                            }}
+                            selectsEnd
+                            startDate={startDate}
+                            endDate={endDate}
+                            minDate={startDate || new Date()}
+                            placeholderText="Return Date"
+                            className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50 focus:bg-white text-gray-700 font-medium"
+                        />
+                        <span className="absolute -top-2 left-4 bg-white px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider z-10">Return</span>
+                    </div>
+
+                    <div className="lg:col-span-1">
+                        <a href="#fleet" className="w-full h-[60px] bg-gray-900 text-white rounded-xl font-bold hover:bg-black transition-all shadow-lg hover:shadow-xl flex items-center justify-center transform active:scale-95 group">
+                            <Search className="group-hover:scale-120 transition-transform" size={20} />
+                        </a>
                     </div>
                 </div>
             </div>
@@ -86,21 +165,25 @@ const Home = () => {
                     <p className="text-gray-500 max-w-2xl mx-auto">Choose from our wide range of luxury and economy vehicles tailored to your needs.</p>
                 </div>
 
-                {filteredCars.length > 0 ? (
+                {loading ? (
+                    <div className="flex justify-center py-24">
+                        <Loader2 className="animate-spin text-primary" size={48} />
+                    </div>
+                ) : filteredCars.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {filteredCars.map(car => (
                             <div key={car.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 group border border-gray-100 flex flex-col h-full">
                                 {/* Image Section */}
                                 <div className="relative h-56 overflow-hidden bg-gray-100">
                                     <img
-                                        src={car.image}
+                                        src={car.imageUrl || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&q=80&w=800"}
                                         alt={`${car.make} ${car.model}`}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                     />
                                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold shadow-sm uppercase tracking-wider text-gray-800 border border-gray-100">
                                         {car.category}
                                     </div>
-                                    {car.status !== 'Available' && (
+                                    {car.status !== 'AVAILABLE' && (
                                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[2px]">
                                             <span className="bg-red-500 text-white px-4 py-2 rounded-full font-bold shadow-lg transform -rotate-12 border-2 border-white">
                                                 {car.status}
@@ -117,7 +200,7 @@ const Home = () => {
                                             <p className="text-gray-500 font-medium text-sm mt-1">{car.year} Model</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-2xl font-extrabold text-primary">{car.price} <span className="text-sm font-normal text-gray-500">ETB</span></p>
+                                            <p className="text-2xl font-extrabold text-primary">{Number(car.dailyRate).toLocaleString()} <span className="text-sm font-normal text-gray-500">ETB</span></p>
                                             <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">per day</p>
                                         </div>
                                     </div>
@@ -131,15 +214,15 @@ const Home = () => {
                                     </div>
 
                                     <div className="mt-auto">
-                                        <Link
-                                            to={car.status === 'Available' ? "/login" : "#"}
-                                            className={`block w-full text-center py-4 rounded-xl font-bold text-sm tracking-wide transition-all uppercase ${car.status === 'Available'
+                                        <button
+                                            onClick={() => car.status === 'AVAILABLE' ? handleBookNow(car.id) : null}
+                                            className={`block w-full text-center py-4 rounded-xl font-bold text-sm tracking-wide transition-all uppercase ${car.status === 'AVAILABLE'
                                                 ? 'bg-gray-900 text-white hover:bg-primary hover:text-gray-900 shadow-md hover:shadow-lg transform active:scale-[0.98]'
                                                 : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                                                 }`}
                                         >
-                                            {car.status === 'Available' ? 'Book Now' : 'Currently Unavailable'}
-                                        </Link>
+                                            {car.status === 'AVAILABLE' ? 'Book Now' : 'Currently Unavailable'}
+                                        </button>
                                     </div>
                                 </div>
                             </div>

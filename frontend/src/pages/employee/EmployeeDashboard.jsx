@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-    CheckCircle, XCircle, Eye, FileCheck, ClipboardCheck, AlertCircle, TrendingUp
+    CheckCircle, XCircle, Eye, FileCheck, ClipboardCheck, AlertCircle, TrendingUp,
+    Loader2
 } from 'lucide-react';
 
 // Shadcn Components
@@ -33,6 +34,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import EmployeeLayout from "@/components/employee-layout";
+import { api } from "@/api";
 
 const EmployeeDashboard = () => {
     // Modal states
@@ -45,32 +47,41 @@ const EmployeeDashboard = () => {
     const [rejectionReason, setRejectionReason] = useState('');
     const [selectedCar, setSelectedCar] = useState('');
 
-    // Mock Data
-    const requests = [
-        { id: 'BR-10234', customer: 'Abebe Kebede', car: 'Toyota Corolla 2021', date: '2024-03-20', status: 'Documents Submitted', phone: '+251-911-234567' },
-        { id: 'BR-10235', customer: 'Sara Tadesse', car: 'Hyundai Elantra', date: '2024-03-19', status: 'Verified', phone: '+251-911-345678' },
-        { id: 'BR-10236', customer: 'John Doe', car: 'Toyota Land Cruiser', date: '2024-03-18', status: 'Approved', phone: '+251-911-456789' },
-        { id: 'BR-10237', customer: 'Dawit Mulatu', car: 'Toyota Hilux', date: '2024-03-17', status: 'Pending', phone: '+251-911-567890' },
-        { id: 'BR-10238', customer: 'Meron Haile', car: 'Suzuki Dzire', date: '2024-03-16', status: 'Documents Submitted', phone: '+251-911-678901' },
-    ];
+    const [requests, setRequests] = useState([]);
+    const [availableCars, setAvailableCars] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    const availableCars = [
-        { id: 'CAR-001', name: 'Toyota Corolla 2021 - Plate: AA-12345' },
-        { id: 'CAR-002', name: 'Hyundai Elantra 2022 - Plate: AA-23456' },
-        { id: 'CAR-003', name: 'Toyota Land Cruiser 2020 - Plate: AA-34567' },
-        { id: 'CAR-004', name: 'Suzuki Dzire 2023 - Plate: AA-45678' },
-    ];
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                const [bookings, cars] = await Promise.all([
+                    api.get('/bookings'),
+                    api.get('/cars')
+                ]);
+                setRequests(bookings);
+                setAvailableCars(cars.filter(c => c.status === 'AVAILABLE'));
+            } catch (error) {
+                console.error('Failed to fetch employee dashboard data:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDashboardData();
+    }, []);
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'Pending': return <Badge variant="warning" className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800">Pending</Badge>;
-            case 'Documents Submitted': return <Badge variant="info" className="bg-blue-100 text-blue-800 hover:bg-blue-200 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">Docs Submitted</Badge>;
-            case 'Verified': return <Badge variant="success" className="bg-green-100 text-green-800 hover:bg-green-200 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">Verified</Badge>;
-            case 'Approved': return <Badge variant="success" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">Approved</Badge>;
-            case 'Rejected': return <Badge variant="destructive" className="bg-red-100 text-red-800 hover:bg-red-200 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">Rejected</Badge>;
-            default: return <Badge variant="secondary">Unknown</Badge>;
+            case 'PENDING': return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">Pending</Badge>;
+            case 'DOCUMENTS_SUBMITTED': return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Docs Submitted</Badge>;
+            case 'VERIFIED': return <Badge className="bg-green-100 text-green-800 border-green-200">Verified</Badge>;
+            case 'APPROVED': return <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">Approved</Badge>;
+            case 'REJECTED': return <Badge variant="destructive">Rejected</Badge>;
+            case 'ACTIVE': return <Badge className="bg-primary/10 text-primary border-primary/20">Active Rental</Badge>;
+            case 'COMPLETED': return <Badge variant="outline">Completed</Badge>;
+            default: return <Badge variant="secondary">{status}</Badge>;
         }
     };
+
 
     const handleVerifyDocuments = (request) => {
         setSelectedRequest(request);
@@ -92,28 +103,61 @@ const EmployeeDashboard = () => {
         setAssignCarModalOpen(true);
     };
 
-    const confirmVerification = (approved) => {
-        console.log(`Document ${approved ? 'approved' : 'rejected'} for ${selectedRequest.id}`, verificationNotes);
-        setVerifyModalOpen(false);
-        setVerificationNotes('');
+    const confirmVerification = async (approved) => {
+        try {
+            const status = approved ? 'VERIFIED' : 'REJECTED';
+            await api.patch(`/bookings/${selectedRequest.id}/status`, { status });
+            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status } : r));
+            setVerifyModalOpen(false);
+            setVerificationNotes('');
+        } catch (error) {
+            console.error('Failed to update verification status:', error);
+        }
     };
 
-    const confirmApproval = () => {
-        console.log(`Booking approved for ${selectedRequest.id}`);
-        setApproveModalOpen(false);
+    const confirmApproval = async () => {
+        try {
+            await api.patch(`/bookings/${selectedRequest.id}/status`, { status: 'APPROVED' });
+            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status: 'APPROVED' } : r));
+            setApproveModalOpen(false);
+        } catch (error) {
+            console.error('Failed to approve booking:', error);
+        }
     };
 
-    const confirmRejection = () => {
-        console.log(`Booking rejected for ${selectedRequest.id}:`, rejectionReason);
-        setRejectModalOpen(false);
-        setRejectionReason('');
+    const confirmRejection = async () => {
+        try {
+            await api.patch(`/bookings/${selectedRequest.id}/status`, { status: 'REJECTED' });
+            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status: 'REJECTED' } : r));
+            setRejectModalOpen(false);
+            setRejectionReason('');
+        } catch (error) {
+            console.error('Failed to reject booking:', error);
+        }
     };
 
-    const confirmCarAssignment = () => {
-        console.log(`Car ${selectedCar} assigned to ${selectedRequest.id}`);
-        setAssignCarModalOpen(false);
-        setSelectedCar('');
+    const confirmCarAssignment = async () => {
+        try {
+            // Re-use status update for car assignment too
+            await api.patch(`/bookings/${selectedRequest.id}/status`, {
+                status: 'ACTIVE',
+                carId: selectedCar
+            });
+            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status: 'ACTIVE', carId: selectedCar } : r));
+            setAssignCarModalOpen(false);
+            setSelectedCar('');
+        } catch (error) {
+            console.error('Failed to assign car:', error);
+        }
     };
+
+    const stats = {
+        pendingVerifications: requests.filter(r => r.status === 'DOCUMENTS_SUBMITTED').length,
+        pendingApprovals: requests.filter(r => r.status === 'VERIFIED').length,
+        activeBookings: requests.filter(r => r.status === 'APPROVED' || r.status === 'ACTIVE').length,
+        availableCarsCount: availableCars.length
+    };
+
 
     return (
         <EmployeeLayout>
@@ -132,9 +176,10 @@ const EmployeeDashboard = () => {
                         <FileCheck className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">2</div>
+                        <div className="text-2xl font-bold">{stats.pendingVerifications}</div>
                         <p className="text-xs text-muted-foreground mt-1 text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
-                            <AlertCircle size={12} /> Requires attention
+                            {stats.pendingVerifications > 0 && <AlertCircle size={12} />}
+                            {stats.pendingVerifications > 0 ? 'Requires attention' : 'All clear'}
                         </p>
                     </CardContent>
                 </Card>
@@ -144,7 +189,7 @@ const EmployeeDashboard = () => {
                         <ClipboardCheck className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">1</div>
+                        <div className="text-2xl font-bold">{stats.pendingApprovals}</div>
                         <p className="text-xs text-muted-foreground mt-1 text-blue-600 dark:text-blue-400">
                             Ready for approval
                         </p>
@@ -152,13 +197,13 @@ const EmployeeDashboard = () => {
                 </Card>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer border-border/60">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Active Bookings</CardTitle>
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Active Rentals</CardTitle>
                         <TrendingUp className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">1</div>
+                        <div className="text-2xl font-bold">{stats.activeBookings}</div>
                         <p className="text-xs text-muted-foreground mt-1 text-green-600 dark:text-green-400">
-                            Currently approved
+                            Current operations
                         </p>
                     </CardContent>
                 </Card>
@@ -168,7 +213,7 @@ const EmployeeDashboard = () => {
                         <TrendingUp className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{availableCars.length}</div>
+                        <div className="text-2xl font-bold">{stats.availableCarsCount}</div>
                         <p className="text-xs text-muted-foreground mt-1">
                             Ready to assign
                         </p>
@@ -183,7 +228,6 @@ const EmployeeDashboard = () => {
                         <h3 className="font-bold text-lg">Customer Booking Requests</h3>
                         <p className="text-sm text-muted-foreground">Verify documents, approve bookings, and assign cars</p>
                     </div>
-                    <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/5">View All</Button>
                 </div>
                 <ScrollArea className="h-[400px]">
                     <Table>
@@ -192,21 +236,43 @@ const EmployeeDashboard = () => {
                                 <TableHead className="w-[100px]">Reference</TableHead>
                                 <TableHead>Customer</TableHead>
                                 <TableHead>Vehicle</TableHead>
-                                <TableHead>Date</TableHead>
+                                <TableHead>Period</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
+                            {loading && (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-10">
+                                        <Loader2 className="animate-spin inline-block mr-2" />
+                                        Loading requests...
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            {!loading && requests.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                                        No booking requests found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                             {requests.map((req) => (
                                 <TableRow key={req.id}>
-                                    <TableCell className="font-mono font-medium text-xs">{req.id}</TableCell>
+                                    <TableCell className="font-mono font-medium text-xs">#{req.id}</TableCell>
                                     <TableCell>
-                                        <div className="font-medium">{req.customer}</div>
-                                        <div className="text-xs text-muted-foreground">{req.phone}</div>
+                                        <div className="font-medium text-sm">
+                                            {req.user?.customerProfile ? `${req.user.customerProfile.firstName} ${req.user.customerProfile.lastName}` : 'N/A'}
+                                        </div>
+                                        <div className="text-[10px] text-muted-foreground">{req.user?.email}</div>
                                     </TableCell>
-                                    <TableCell>{req.car}</TableCell>
-                                    <TableCell className="text-muted-foreground">{req.date}</TableCell>
+                                    <TableCell className="text-sm">
+                                        {req.car?.make} {req.car?.model}
+                                        <div className="text-[10px] text-muted-foreground">Plate: {req.car?.plateNumber}</div>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-[10px]">
+                                        {new Date(req.startDate).toLocaleDateString()} to {new Date(req.endDate).toLocaleDateString()}
+                                    </TableCell>
                                     <TableCell>
                                         {getStatusBadge(req.status)}
                                     </TableCell>
@@ -215,7 +281,7 @@ const EmployeeDashboard = () => {
                                             <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" title="View Details">
                                                 <Eye size={16} />
                                             </Button>
-                                            {req.status === 'Documents Submitted' && (
+                                            {req.status === 'DOCUMENTS_SUBMITTED' && (
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -226,7 +292,7 @@ const EmployeeDashboard = () => {
                                                     <FileCheck size={16} />
                                                 </Button>
                                             )}
-                                            {req.status === 'Verified' && (
+                                            {req.status === 'VERIFIED' && (
                                                 <>
                                                     <Button
                                                         variant="ghost"
@@ -248,7 +314,7 @@ const EmployeeDashboard = () => {
                                                     </Button>
                                                 </>
                                             )}
-                                            {req.status === 'Approved' && (
+                                            {req.status === 'APPROVED' && (
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -267,6 +333,7 @@ const EmployeeDashboard = () => {
                     </Table>
                 </ScrollArea>
             </Card>
+
 
             {/* Modals remain the same but using shadcn Dialog */}
             <Dialog open={verifyModalOpen} onOpenChange={setVerifyModalOpen}>
