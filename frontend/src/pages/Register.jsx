@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
@@ -15,8 +15,20 @@ const Register = () => {
         password: '',
         confirmPassword: ''
     });
+    const [searchParams] = useSearchParams();
+    const carId = searchParams.get('carId');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const startDate = sessionStorage.getItem('startDate');
+        const endDate = sessionStorage.getItem('endDate');
+
+        if (!carId || !startDate || !endDate) {
+            toast.error('Please select a car and rental dates first.');
+            navigate('/');
+        }
+    }, [searchParams, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -30,7 +42,7 @@ const Register = () => {
         setLoading(true);
 
         try {
-            const user = await register({
+            await register({
                 email: formData.email,
                 password: formData.password,
                 firstName: formData.firstName,
@@ -39,13 +51,10 @@ const Register = () => {
                 role: 'CUSTOMER'
             });
 
-            const params = new URLSearchParams(window.location.search);
-            const carId = params.get('carId');
-
             if (carId) {
                 navigate(`/upload-docs?carId=${carId}`);
             } else {
-                navigate('/upload-docs');
+                navigate('/');
             }
         } catch (err) {
             const msg = err.message || 'Registration failed';
@@ -71,7 +80,7 @@ const Register = () => {
                     </h2>
                     <p className="mt-2 text-center text-sm text-gray-600">
                         Already have an account?{' '}
-                        <Link to="/login" className="font-semibold text-primary hover:text-opacity-80 transition-colors">
+                        <Link to={carId ? `/login?carId=${carId}` : '/login'} className="font-semibold text-primary hover:text-opacity-80 transition-colors">
                             Sign in here
                         </Link>
                     </p>
@@ -99,7 +108,7 @@ const Register = () => {
                                     name="firstName"
                                     type="text"
                                     required
-                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                     value={formData.firstName}
                                     onChange={handleChange}
                                 />
@@ -113,7 +122,7 @@ const Register = () => {
                                     name="lastName"
                                     type="text"
                                     required
-                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                     value={formData.lastName}
                                     onChange={handleChange}
                                 />
@@ -130,7 +139,7 @@ const Register = () => {
                                 type="email"
                                 autoComplete="email"
                                 required
-                                className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                 value={formData.email}
                                 onChange={handleChange}
                             />
@@ -145,7 +154,7 @@ const Register = () => {
                                 name="phone"
                                 type="tel"
                                 required
-                                className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                 value={formData.phone}
                                 onChange={handleChange}
                             />
@@ -161,7 +170,7 @@ const Register = () => {
                                     name="password"
                                     type="password"
                                     required
-                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                     value={formData.password}
                                     onChange={handleChange}
                                 />
@@ -176,7 +185,7 @@ const Register = () => {
                                     name="confirmPassword"
                                     type="password"
                                     required
-                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                     value={formData.confirmPassword}
                                     onChange={handleChange}
                                 />
@@ -184,12 +193,12 @@ const Register = () => {
                         </div>
 
                         <div className="pt-4 flex gap-4">
-                            <Button type="submit" isLoading={loading} className="w-full py-3.5 font-bold shadow-md hover:shadow-lg">
+                            <Button type="submit" isLoading={loading} className="w-full bg-gray-900 hover:bg-black text-white border-gray-900 shadow-xl hover:shadow-gray-900/40 transition-all py-4 font-bold active:scale-95">
                                 Sign Up
                             </Button>
                         </div>
                         <div className="text-center">
-                            <Button type="button" variant="outline" onClick={() => navigate('/')} className="w-full py-3.5">
+                            <Button type="button" variant="outline" onClick={() => navigate('/')} className="w-full py-3.5 text-gray-900">
                                 Cancel
                             </Button>
                         </div>

@@ -11,7 +11,8 @@ const createBooking = async (req, res) => {
             totalAmount,
             pickupLocation,
             returnLocation,
-            isDelivery
+            isDelivery,
+            paymentDetails
         } = req.body;
         const userId = req.user.id;
 
@@ -52,7 +53,21 @@ const createBooking = async (req, res) => {
                 pickupLocation,
                 returnLocation,
                 isDelivery: isDelivery || false,
-                status: 'PENDING'
+                status: 'PENDING',
+                payment: (paymentDetails && paymentDetails.method) ? {
+                    create: {
+                        amount: parseFloat(totalAmount),
+                        method: paymentDetails.method,
+                        transactionId: paymentDetails.transactionNumber || 'N/A',
+                        payerIdentifier: (paymentDetails.method === 'TELEBIRR'
+                            ? (paymentDetails.phoneNumber || 'N/A')
+                            : (paymentDetails.accountNumber || 'N/A')),
+                        status: 'PENDING'
+                    }
+                } : undefined
+            },
+            include: {
+                payment: true
             }
         });
 
@@ -80,7 +95,13 @@ const getMyBookings = async (req, res) => {
 const getAllBookings = async (req, res) => {
     try {
         const bookings = await prisma.booking.findMany({
-            include: { user: true, car: true, payment: true },
+            include: {
+                user: {
+                    include: { customerProfile: true }
+                },
+                car: true,
+                payment: true
+            },
             orderBy: { createdAt: 'desc' }
         });
         res.json(bookings);
@@ -93,7 +114,7 @@ const getAllBookings = async (req, res) => {
 const updateBookingStatus = async (req, res) => {
     try {
         const { id } = req.params;
-        const { status, carId } = req.body;
+        const { status, carId, assignedDriver } = req.body;
         const employeeId = req.user.id;
 
         const updateData = {
@@ -105,10 +126,20 @@ const updateBookingStatus = async (req, res) => {
             updateData.carId = parseInt(carId);
         }
 
+        if (assignedDriver) {
+            updateData.assignedDriver = assignedDriver;
+        }
+
         const booking = await prisma.booking.update({
             where: { id: parseInt(id) },
             data: updateData,
-            include: { user: true, car: true }
+            include: {
+                user: {
+                    include: { customerProfile: true }
+                },
+                car: true,
+                payment: true
+            }
         });
 
         res.json(booking);

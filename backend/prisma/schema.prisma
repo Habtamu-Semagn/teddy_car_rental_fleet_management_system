@@ -128,7 +128,8 @@ model Payment {
   amount        Decimal
   method        String   // "Telebirr", etc.
   transactionId String?
-  status        String   // "SUCCESS", "FAILED"
+  payerIdentifier String? // Phone number or Account number
+  status        String   @default("PENDING") // "PENDING", "SUCCESS", "FAILED"
   createdAt     DateTime @default(now())
 }
 

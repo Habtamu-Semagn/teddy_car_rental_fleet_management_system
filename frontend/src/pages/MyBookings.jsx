@@ -131,7 +131,7 @@ const MyBookings = () => {
                                     <div className="relative w-full lg:w-48 h-32 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
                                         {booking.car?.imageUrl ? (
                                             <img
-                                                src={booking.car.imageUrl}
+                                                src={api.getImageUrl(booking.car.imageUrl)}
                                                 alt={booking.car.model}
                                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                             />

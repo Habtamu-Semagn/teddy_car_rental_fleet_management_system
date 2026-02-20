@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CreditCard, Wallet, Smartphone, ShieldCheck, Loader2 } from 'lucide-react';
+import { CreditCard, Wallet, Smartphone, ShieldCheck, Loader2, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { api } from '@/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+
+import MapSelector from '@/components/MapSelector';
 
 const Payment = () => {
     const navigate = useNavigate();
@@ -14,6 +16,14 @@ const Payment = () => {
     const [fetching, setFetching] = useState(true);
     const [car, setCar] = useState(null);
     const [packages, setPackages] = useState([]);
+
+    // Location State
+    const [locationData, setLocationData] = useState({
+        lat: 9.0227,
+        lng: 38.7460,
+        isDelivery: false,
+        address: ''
+    });
 
     // Payment State
     const [paymentMethod, setPaymentMethod] = useState('TELEBIRR'); // 'TELEBIRR' or 'CBE'
@@ -85,6 +95,8 @@ const Payment = () => {
                 totalAmount: total,
                 idCardUrl: sessionStorage.getItem('idCardUrl') || user?.profile?.idCardUrl,
                 driverLicenseUrl: sessionStorage.getItem('licenseUrl') || user?.profile?.driverLicenseUrl,
+                pickupLocation: locationData.address || `Lat: ${locationData.lat}, Lng: ${locationData.lng}`,
+                isDelivery: locationData.isDelivery,
                 paymentDetails: {
                     method: paymentMethod,
                     phoneNumber: paymentMethod === 'TELEBIRR' ? phoneNumber : null,
@@ -116,7 +128,6 @@ const Payment = () => {
         <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl mx-auto">
                 <div className="text-center mb-10">
-                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Secure Payment</h1>
                     <p className="mt-2 text-gray-500">Complete your booking securely by choosing your preferred payment method.</p>
                 </div>
 
@@ -162,6 +173,18 @@ const Payment = () => {
                     </div>
 
                     <div className="lg:col-span-2 space-y-6">
+                        {/* Map Integration */}
+                        <div className="bg-white shadow-lg rounded-2xl border border-gray-100 p-8">
+                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <Navigation size={22} className="text-primary" />
+                                Select Pickup / Delivery Location
+                            </h3>
+                            <MapSelector
+                                onLocationChange={setLocationData}
+                                initialLocation={null}
+                            />
+                        </div>
+
                         <div className="bg-white shadow-lg rounded-2xl border border-gray-100 p-8">
                             <h3 className="text-xl font-bold text-gray-900 mb-6">Choose Payment Method</h3>
 

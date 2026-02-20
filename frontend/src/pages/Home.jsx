@@ -61,7 +61,7 @@ const Home = () => {
 
     return (
         <div className="space-y-16 pb-16 bg-gray-50 min-h-screen">
-            {/* Hero Section */}
+            {/* Hero Sectionn */}
             <section className="relative h-[600px] flex items-center justify-center bg-gray-900 text-white overflow-hidden">
                 <div className="absolute inset-0 z-0">
                     <img
@@ -97,7 +97,7 @@ const Home = () => {
                         <input
                             type="text"
                             placeholder="Make or model..."
-                            className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50 focus:bg-white"
+                            className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50 focus:bg-white text-gray-900"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -106,7 +106,7 @@ const Home = () => {
                     <div className="lg:col-span-2 relative group">
                         <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={20} />
                         <select
-                            className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none appearance-none bg-gray-50 focus:bg-white cursor-pointer"
+                            className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none appearance-none bg-gray-50 focus:bg-white cursor-pointer text-gray-900"
                             value={filterCategory}
                             onChange={(e) => setFilterCategory(e.target.value)}
                         >
@@ -176,7 +176,7 @@ const Home = () => {
                                 {/* Image Section */}
                                 <div className="relative h-56 overflow-hidden bg-gray-100">
                                     <img
-                                        src={car.imageUrl || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&q=80&w=800"}
+                                        src={api.getImageUrl(car.imageUrl) || "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&q=80&w=800"}
                                         alt={`${car.make} ${car.model}`}
                                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                     />

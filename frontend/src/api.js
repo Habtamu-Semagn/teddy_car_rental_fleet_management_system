@@ -1,4 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const BASE_URL = API_URL.replace('/api', '');
 
 const apiRequest = async (endpoint, options = {}) => {
     const token = localStorage.getItem('teddy_token');
@@ -26,6 +27,10 @@ const apiRequest = async (endpoint, options = {}) => {
         }
 
         if (!response.ok) {
+            // If unauthorized and not a login/register request, clear token
+            if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
+                localStorage.removeItem('teddy_token');
+            }
             throw new Error(data.message || `Error ${response.status}: ${response.statusText}`);
         }
 
@@ -55,5 +60,11 @@ export const api = {
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || 'Upload failed');
         return data;
+    },
+
+    getImageUrl: (path) => {
+        if (!path) return null;
+        if (path.startsWith('http')) return path;
+        return `${BASE_URL}${path}`;
     }
 };

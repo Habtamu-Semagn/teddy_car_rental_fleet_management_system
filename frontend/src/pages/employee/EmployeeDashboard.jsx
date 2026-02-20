@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
     CheckCircle, XCircle, Eye, FileCheck, ClipboardCheck, AlertCircle, TrendingUp,
-    Loader2
+    Loader2, Navigation
 } from 'lucide-react';
+import { toast } from "sonner";
 
 // Shadcn Components
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import EmployeeLayout from "@/components/employee-layout";
 import { api } from "@/api";
+import MapSelector from "@/components/MapSelector";
 
 const EmployeeDashboard = () => {
     // Modal states
@@ -42,10 +44,12 @@ const EmployeeDashboard = () => {
     const [approveModalOpen, setApproveModalOpen] = useState(false);
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [assignCarModalOpen, setAssignCarModalOpen] = useState(false);
+    const [detailsModalOpen, setDetailsModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [verificationNotes, setVerificationNotes] = useState('');
     const [rejectionReason, setRejectionReason] = useState('');
     const [selectedCar, setSelectedCar] = useState('');
+    const [driverName, setDriverName] = useState('');
 
     const [requests, setRequests] = useState([]);
     const [availableCars, setAvailableCars] = useState([]);
@@ -83,6 +87,14 @@ const EmployeeDashboard = () => {
     };
 
 
+    const handleViewDetails = (request) => {
+        console.log('--- Viewing Booking Details ---');
+        console.log('Request Data:', request);
+        console.log('Payment Data:', request.payment);
+        setSelectedRequest(request);
+        setDetailsModalOpen(true);
+    };
+
     const handleVerifyDocuments = (request) => {
         setSelectedRequest(request);
         setVerifyModalOpen(true);
@@ -104,55 +116,115 @@ const EmployeeDashboard = () => {
     };
 
     const confirmVerification = async (approved) => {
+        console.log('--- confirmVerification ---');
+        console.log('Approved:', approved);
+        console.log('Selected Request:', selectedRequest);
+
+        if (!selectedRequest?.id) {
+            console.error('No request ID found in selectedRequest');
+            toast.error("No request selected");
+            return;
+        }
         try {
             const status = approved ? 'VERIFIED' : 'REJECTED';
-            await api.patch(`/bookings/${selectedRequest.id}/status`, { status });
-            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status } : r));
+            console.log(`Sending PATCH request to /bookings/${selectedRequest.id}/status with status: ${status}`);
+
+            toast.loading(approved ? "Verifying documents..." : "Rejecting documents...", { id: 'verify-task' });
+            const updatedBooking = await api.patch(`/bookings/${selectedRequest.id}/status`, { status });
+
+            console.log('PATCH Response:', updatedBooking);
+
+            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? updatedBooking : r));
             setVerifyModalOpen(false);
             setVerificationNotes('');
+            toast.success(approved ? "Documents verified successfully" : "Documents rejected", { id: 'verify-task' });
         } catch (error) {
             console.error('Failed to update verification status:', error);
+            toast.error(error.message || "Failed to update status", { id: 'verify-task' });
         }
     };
 
     const confirmApproval = async () => {
+        console.log('--- confirmApproval ---');
+        console.log('Selected Request:', selectedRequest);
+
+        if (!selectedRequest?.id) {
+            console.error('No request ID found in selectedRequest');
+            toast.error("No request selected");
+            return;
+        }
+
+        if (selectedRequest.isDelivery && !driverName) {
+            toast.error("Please assign a company driver for this delivery");
+            return;
+        }
+
         try {
-            await api.patch(`/bookings/${selectedRequest.id}/status`, { status: 'APPROVED' });
-            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status: 'APPROVED' } : r));
+            console.log(`Sending PATCH request to /bookings/${selectedRequest.id}/status with status: APPROVED`);
+
+            toast.loading("Approving booking...", { id: 'approve-task' });
+            const updatedBooking = await api.patch(`/bookings/${selectedRequest.id}/status`, {
+                status: 'APPROVED',
+                assignedDriver: driverName
+            });
+
+            console.log('PATCH Response:', updatedBooking);
+
+            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? updatedBooking : r));
             setApproveModalOpen(false);
+            setDriverName('');
+            toast.success("Booking approved successfully", { id: 'approve-task' });
         } catch (error) {
             console.error('Failed to approve booking:', error);
+            toast.error(error.message || "Failed to approve booking", { id: 'approve-task' });
         }
     };
 
     const confirmRejection = async () => {
+        if (!selectedRequest?.id) {
+            toast.error("No request selected");
+            return;
+        }
         try {
-            await api.patch(`/bookings/${selectedRequest.id}/status`, { status: 'REJECTED' });
-            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status: 'REJECTED' } : r));
+            toast.loading("Rejecting booking...", { id: 'reject-task' });
+            const updatedBooking = await api.patch(`/bookings/${selectedRequest.id}/status`, { status: 'REJECTED' });
+            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? updatedBooking : r));
             setRejectModalOpen(false);
             setRejectionReason('');
+            toast.success("Booking rejected", { id: 'reject-task' });
         } catch (error) {
             console.error('Failed to reject booking:', error);
+            toast.error(error.message || "Failed to reject booking", { id: 'reject-task' });
         }
     };
 
     const confirmCarAssignment = async () => {
+        if (!selectedRequest?.id) {
+            toast.error("No request selected");
+            return;
+        }
+        if (!selectedCar) {
+            toast.error("Please select a car");
+            return;
+        }
         try {
-            // Re-use status update for car assignment too
-            await api.patch(`/bookings/${selectedRequest.id}/status`, {
+            toast.loading("Assigning car...", { id: 'assign-task' });
+            const updatedBooking = await api.patch(`/bookings/${selectedRequest.id}/status`, {
                 status: 'ACTIVE',
                 carId: selectedCar
             });
-            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? { ...r, status: 'ACTIVE', carId: selectedCar } : r));
+            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? updatedBooking : r));
             setAssignCarModalOpen(false);
             setSelectedCar('');
+            toast.success("Car assigned successfully", { id: 'assign-task' });
         } catch (error) {
             console.error('Failed to assign car:', error);
+            toast.error(error.message || "Failed to assign car", { id: 'assign-task' });
         }
     };
 
     const stats = {
-        pendingVerifications: requests.filter(r => r.status === 'DOCUMENTS_SUBMITTED').length,
+        pendingVerifications: requests.filter(r => r.status === 'PENDING').length,
         pendingApprovals: requests.filter(r => r.status === 'VERIFIED').length,
         activeBookings: requests.filter(r => r.status === 'APPROVED' || r.status === 'ACTIVE').length,
         availableCarsCount: availableCars.length
@@ -278,10 +350,16 @@ const EmployeeDashboard = () => {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-1">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" title="View Details">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                title="View Details"
+                                                onClick={() => handleViewDetails(req)}
+                                            >
                                                 <Eye size={16} />
                                             </Button>
-                                            {req.status === 'DOCUMENTS_SUBMITTED' && (
+                                            {req.status === 'PENDING' && (
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -349,15 +427,47 @@ const EmployeeDashboard = () => {
                             <div className="space-y-2">
                                 <h4 className="font-medium">Uploaded Documents:</h4>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Card className="p-4 text-center bg-muted/30">
-                                        <FileCheck className="mx-auto mb-2 text-primary" size={32} />
+                                    <Card className="p-4 text-center bg-muted/30 overflow-hidden">
+                                        {selectedRequest?.driverLicenseUrl ? (
+                                            <img
+                                                src={api.getImageUrl(selectedRequest.driverLicenseUrl)}
+                                                alt="License"
+                                                className="h-32 w-full object-cover rounded mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                                                onClick={() => window.open(api.getImageUrl(selectedRequest.driverLicenseUrl), '_blank')}
+                                            />
+                                        ) : (
+                                            <FileCheck className="mx-auto mb-2 text-primary" size={32} />
+                                        )}
                                         <p className="text-sm font-medium">Driver's License</p>
-                                        <Button variant="link" size="sm" className="text-xs">View Document</Button>
+                                        <Button
+                                            variant="link"
+                                            size="sm"
+                                            className="text-xs"
+                                            onClick={() => window.open(api.getImageUrl(selectedRequest?.driverLicenseUrl), '_blank')}
+                                        >
+                                            View Full Size
+                                        </Button>
                                     </Card>
-                                    <Card className="p-4 text-center bg-muted/30">
-                                        <FileCheck className="mx-auto mb-2 text-primary" size={32} />
+                                    <Card className="p-4 text-center bg-muted/30 overflow-hidden">
+                                        {selectedRequest?.idCardUrl ? (
+                                            <img
+                                                src={api.getImageUrl(selectedRequest.idCardUrl)}
+                                                alt="ID Card"
+                                                className="h-32 w-full object-cover rounded mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                                                onClick={() => window.open(api.getImageUrl(selectedRequest.idCardUrl), '_blank')}
+                                            />
+                                        ) : (
+                                            <FileCheck className="mx-auto mb-2 text-primary" size={32} />
+                                        )}
                                         <p className="text-sm font-medium">ID Card</p>
-                                        <Button variant="link" size="sm" className="text-xs">View Document</Button>
+                                        <Button
+                                            variant="link"
+                                            size="sm"
+                                            className="text-xs"
+                                            onClick={() => window.open(api.getImageUrl(selectedRequest?.idCardUrl), '_blank')}
+                                        >
+                                            View Full Size
+                                        </Button>
                                     </Card>
                                 </div>
                             </div>
@@ -395,12 +505,55 @@ const EmployeeDashboard = () => {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <p className="text-sm"><strong>Customer:</strong> {selectedRequest?.customer}</p>
-                            <p className="text-sm"><strong>Vehicle:</strong> {selectedRequest?.car}</p>
-                            <p className="text-sm"><strong>Date:</strong> {selectedRequest?.date}</p>
-                            <p className="text-sm"><strong>Phone:</strong> {selectedRequest?.phone}</p>
+                        <div className="space-y-3 bg-muted/30 p-4 rounded-lg border">
+                            <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground mb-2">Customer & Booking</h4>
+                            <div className="grid grid-cols-2 gap-y-2 text-sm">
+                                <span className="text-muted-foreground">Customer:</span>
+                                <span className="font-medium">{selectedRequest?.user?.customerProfile ? `${selectedRequest.user.customerProfile.firstName} ${selectedRequest.user.customerProfile.lastName}` : 'N/A'}</span>
+
+                                <span className="text-muted-foreground">Vehicle:</span>
+                                <span className="font-medium">{selectedRequest?.car?.make} {selectedRequest?.car?.model}</span>
+
+                                <span className="text-muted-foreground">Period:</span>
+                                <span className="font-medium">{selectedRequest ? `${new Date(selectedRequest.startDate).toLocaleDateString()} - ${new Date(selectedRequest.endDate).toLocaleDateString()}` : ''}</span>
+
+                                <span className="text-muted-foreground">Amount:</span>
+                                <span className="font-bold text-primary">{Number(selectedRequest?.totalAmount).toLocaleString()} ETB</span>
+                            </div>
                         </div>
+
+                        <div className="space-y-3 bg-primary/5 p-4 rounded-lg border border-primary/20">
+                            <h4 className="font-bold text-sm uppercase tracking-wider text-primary mb-2">Payment Verification</h4>
+                            <div className="grid grid-cols-2 gap-y-2 text-sm">
+                                <span className="text-muted-foreground">Method:</span>
+                                <span className="font-bold">{selectedRequest?.payment?.method || 'N/A'}</span>
+
+                                <span className="text-muted-foreground">Identifier (Phone/Acc):</span>
+                                <span className="font-bold text-blue-600">{selectedRequest?.payment?.payerIdentifier || 'N/A'}</span>
+
+                                <span className="text-muted-foreground">Transaction ID:</span>
+                                <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border">{selectedRequest?.payment?.transactionId || 'N/A'}</span>
+                            </div>
+                        </div>
+
+                        {selectedRequest?.isDelivery && (
+                            <div className="space-y-3 bg-orange-50 p-4 rounded-lg border border-orange-200 animate-in fade-in slide-in-from-top-2">
+                                <h4 className="font-bold text-sm uppercase tracking-wider text-orange-700 mb-2 flex items-center gap-2">
+                                    <AlertCircle size={16} /> Driver Assignment Required
+                                </h4>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-orange-800">Assign Company Driver Name</label>
+                                    <Textarea
+                                        placeholder="Enter the name of the driver assigned to this delivery..."
+                                        value={driverName}
+                                        onChange={(e) => setDriverName(e.target.value)}
+                                        rows={2}
+                                        className="border-orange-200 focus:ring-orange-500"
+                                    />
+                                    <p className="text-[10px] text-orange-600">This pickup is outside the office radius.</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setApproveModalOpen(false)}>Cancel</Button>
@@ -444,9 +597,9 @@ const EmployeeDashboard = () => {
             <Dialog open={assignCarModalOpen} onOpenChange={setAssignCarModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Assign Car - {selectedRequest?.id}</DialogTitle>
+                        <DialogTitle>Assign Car - #{selectedRequest?.id}</DialogTitle>
                         <DialogDescription>
-                            Select an available car to assign to {selectedRequest?.customer}
+                            Select an available car to assign to {selectedRequest?.user?.customerProfile ? `${selectedRequest.user.customerProfile.firstName} ${selectedRequest.user.customerProfile.lastName}` : 'N/A'}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -472,6 +625,163 @@ const EmployeeDashboard = () => {
                             <CheckCircle size={16} className="mr-2" />
                             Assign Car
                         </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* View Details Modal */}
+            <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
+                <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>Booking Details - #{selectedRequest?.id}</DialogTitle>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-[85vh]">
+                        <div className="p-4 space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Customer & Car */}
+                                <div className="space-y-4">
+                                    <div className="bg-muted/30 p-4 rounded-lg border">
+                                        <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                                            <Eye size={14} /> Customer Info
+                                        </h4>
+                                        <div className="space-y-2 text-sm">
+                                            <p className="font-bold text-lg">{selectedRequest?.user?.customerProfile ? `${selectedRequest.user.customerProfile.firstName} ${selectedRequest.user.customerProfile.lastName}` : 'N/A'}</p>
+                                            <p className="text-muted-foreground">{selectedRequest?.user?.email}</p>
+                                            <p className="text-muted-foreground">{selectedRequest?.user?.customerProfile?.phoneNumber}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-muted/30 p-4 rounded-lg border">
+                                        <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                                            <TrendingUp size={14} /> Vehicle Specs
+                                        </h4>
+                                        <div className="space-y-2 text-sm">
+                                            <p className="font-bold text-lg">{selectedRequest?.car?.make} {selectedRequest?.car?.model}</p>
+                                            <p className="text-muted-foreground">Plate: {selectedRequest?.car?.plateNumber}</p>
+                                            <p className="text-muted-foreground">Category: {selectedRequest?.car?.category}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Pickup / Delivery Location Map */}
+                                    <div className="bg-muted/30 p-4 rounded-lg border">
+                                        <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                                            <Navigation size={14} /> Pickup / Delivery Location
+                                        </h4>
+                                        <div className="space-y-3">
+                                            <div className="text-xs text-muted-foreground bg-white/50 p-2 rounded border">
+                                                {selectedRequest?.pickupLocation || 'No location specified'}
+                                            </div>
+                                            {selectedRequest?.pickupLocation && (
+                                                <div className="h-[200px] w-full rounded-lg overflow-hidden border">
+                                                    <MapSelector
+                                                        isReadOnly={true}
+                                                        initialLocation={[9.0227, 38.7460]} // Fallback to office if not parseable
+                                                    // Note: In a real app we'd parse coordinates from the string or store them separately
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Booking & Payment */}
+                                <div className="space-y-4">
+                                    <div className="bg-muted/30 p-4 rounded-lg border">
+                                        <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
+                                            <FileCheck size={14} /> Rental Period
+                                        </h4>
+                                        <div className="space-y-2 text-sm">
+                                            <p className="font-bold">From: {selectedRequest ? new Date(selectedRequest.startDate).toLocaleDateString() : ''}</p>
+                                            <p className="font-bold">To: {selectedRequest ? new Date(selectedRequest.endDate).toLocaleDateString() : ''}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+                                        <h4 className="font-bold text-xs uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
+                                            <ClipboardCheck size={14} /> Financial Summary
+                                        </h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span>Total Amount:</span>
+                                                <span className="font-bold">{Number(selectedRequest?.totalAmount).toLocaleString()} ETB</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Payment Method:</span>
+                                                <span className="font-bold">{selectedRequest?.payment?.method || 'N/A'}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Identifier (Phone/Acc):</span>
+                                                <span className="font-bold">{selectedRequest?.payment?.payerIdentifier || 'N/A'}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Transaction ID:</span>
+                                                <span className="font-bold font-mono">{selectedRequest?.payment?.transactionId || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Documents Preview */}
+                            <div className="space-y-3">
+                                <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Uploaded Documents</h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {selectedRequest?.driverLicenseUrl && (
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-medium text-muted-foreground">Driver's License</p>
+                                            <img src={api.getImageUrl(selectedRequest.driverLicenseUrl)} className="w-full h-48 object-cover rounded-lg border cursor-pointer" onClick={() => window.open(api.getImageUrl(selectedRequest.driverLicenseUrl), '_blank')} />
+                                        </div>
+                                    )}
+                                    {selectedRequest?.idCardUrl && (
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-medium text-muted-foreground">ID Card</p>
+                                            <img src={api.getImageUrl(selectedRequest.idCardUrl)} className="w-full h-48 object-cover rounded-lg border cursor-pointer" onClick={() => window.open(api.getImageUrl(selectedRequest.idCardUrl), '_blank')} />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </ScrollArea>
+                    <DialogFooter className="flex justify-between sm:justify-between items-center w-full gap-2">
+                        <div className="flex gap-2">
+                            {selectedRequest?.status === 'PENDING' && (
+                                <Button className="bg-purple-600 hover:bg-purple-700" onClick={() => {
+                                    setDetailsModalOpen(false);
+                                    handleVerifyDocuments(selectedRequest);
+                                }}>
+                                    <FileCheck size={16} className="mr-2" />
+                                    Verify Docs
+                                </Button>
+                            )}
+                            {selectedRequest?.status === 'VERIFIED' && (
+                                <>
+                                    <Button className="bg-green-600 hover:bg-green-700" onClick={() => {
+                                        setDetailsModalOpen(false);
+                                        handleApproveBooking(selectedRequest);
+                                    }}>
+                                        <CheckCircle size={16} className="mr-2" />
+                                        Approve
+                                    </Button>
+                                    <Button variant="destructive" onClick={() => {
+                                        setDetailsModalOpen(false);
+                                        handleRejectBooking(selectedRequest);
+                                    }}>
+                                        <XCircle size={16} className="mr-2" />
+                                        Reject
+                                    </Button>
+                                </>
+                            )}
+                            {selectedRequest?.status === 'APPROVED' && (
+                                <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={() => {
+                                    setDetailsModalOpen(false);
+                                    handleAssignCar(selectedRequest);
+                                }}>
+                                    <FileCheck size={16} className="mr-2" />
+                                    Assign Car
+                                </Button>
+                            )}
+                        </div>
+                        <Button variant="outline" onClick={() => setDetailsModalOpen(false)}>Close</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

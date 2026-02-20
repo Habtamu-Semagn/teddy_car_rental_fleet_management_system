@@ -51,7 +51,6 @@ const UploadDocs = () => {
             if (carId) {
                 navigate(`/agreement?carId=${carId}`);
             } else {
-                toast.success('Documents uploaded successfully!');
                 navigate('/');
             }
         } catch (error) {

@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
 const Login = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { login } = useAuth();
     const [formData, setFormData] = useState({ email: '', password: '' });
+    const carId = searchParams.get('carId');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -18,9 +20,6 @@ const Login = () => {
 
         try {
             const user = await login(formData.email, formData.password);
-
-            const params = new URLSearchParams(window.location.search);
-            const carId = params.get('carId');
 
             // Redirect based on role
             if (user.role === 'ADMIN') {
@@ -92,7 +91,7 @@ const Login = () => {
                                     autoComplete="email"
                                     required
                                     placeholder="Enter your email"
-                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
@@ -111,7 +110,7 @@ const Login = () => {
                                     autoComplete="current-password"
                                     required
                                     placeholder="Enter your password"
-                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"
+                                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 />
@@ -158,8 +157,10 @@ const Login = () => {
                         </div>
 
                         <div className="mt-6 grid gap-3">
-                            <Link to="/register" className="w-full">
-                                <Button variant="outline" className="w-full">Create Account</Button>
+                            <Link to={carId ? `/register?carId=${carId}` : '/register'} className="w-full">
+                                <Button className="w-full bg-gray-900 hover:bg-black text-white border-gray-900 shadow-md hover:shadow-lg transition-all py-3">
+                                    Create Account
+                                </Button>
                             </Link>
                         </div>
                     </div>

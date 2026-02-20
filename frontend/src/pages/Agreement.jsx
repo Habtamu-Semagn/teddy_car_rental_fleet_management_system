@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileText, PenTool } from 'lucide-react';
@@ -11,6 +11,12 @@ const Agreement = () => {
     const [signature, setSignature] = useState('');
     const [agreed, setAgreed] = useState(false);
     const carId = searchParams.get('carId');
+
+    useEffect(() => {
+        if (!carId) {
+            navigate('/');
+        }
+    }, [carId, navigate]);
 
     const handleSubmit = (e) => {
         e.preventDefault();

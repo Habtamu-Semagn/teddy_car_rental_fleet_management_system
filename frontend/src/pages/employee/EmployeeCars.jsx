@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Car, Eye, Settings, Calendar, Search as SearchIcon, Loader2
+    Car, Eye, Settings, Calendar, Search as SearchIcon, Loader2, Plus, Pencil, Trash2, Save, X, Upload, ImageIcon
 } from 'lucide-react';
 
 // Shadcn Components
@@ -35,27 +35,50 @@ import {
 } from "@/components/ui/select";
 import EmployeeLayout from "@/components/employee-layout";
 import { api } from "@/api";
+import { toast } from "sonner";
 
 const EmployeeCars = () => {
-    const [detailsModalOpen, setDetailsModalOpen] = useState(false);
-    const [selectedCar, setSelectedCar] = useState(null);
+    const [cars, setCars] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
-    const [cars, setCars] = useState([]);
-    const [loading, setLoading] = useState(true);
+    // Modals
+    const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+    const [formModalOpen, setFormModalOpen] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [selectedCar, setSelectedCar] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+
+    // Form State
+    const [carForm, setCarForm] = useState({
+        make: '',
+        model: '',
+        year: new Date().getFullYear(),
+        plateNumber: '',
+        category: 'Economy',
+        dailyRate: '',
+        status: 'AVAILABLE',
+        location: '',
+        features: []
+    });
+
+    const fetchCars = async () => {
+        setLoading(true);
+        try {
+            const data = await api.get('/cars');
+            setCars(data);
+        } catch (error) {
+            console.error('Failed to fetch cars:', error);
+            toast.error("Failed to load fleet data");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchCars = async () => {
-            try {
-                const data = await api.get('/cars');
-                setCars(data);
-            } catch (error) {
-                console.error('Failed to fetch cars:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchCars();
     }, []);
 
@@ -72,6 +95,98 @@ const EmployeeCars = () => {
     const handleViewDetails = (car) => {
         setSelectedCar(car);
         setDetailsModalOpen(true);
+    };
+
+    const handleOpenAddModal = () => {
+        setIsEditing(false);
+        setCarForm({
+            make: '',
+            model: '',
+            year: new Date().getFullYear(),
+            plateNumber: '',
+            category: 'Economy',
+            dailyRate: '',
+            status: 'AVAILABLE',
+            location: '',
+            features: []
+        });
+        setFormModalOpen(true);
+    };
+
+    const handleOpenEditModal = (car) => {
+        setIsEditing(true);
+        setSelectedCar(car);
+        setCarForm({
+            ...car,
+            dailyRate: car.dailyRate.toString(),
+            features: car.features || []
+        });
+        setFormModalOpen(true);
+    };
+
+    const handleOpenDeleteConfirm = (car) => {
+        setSelectedCar(car);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleSaveCar = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            if (isEditing) {
+                await api.put(`/cars/${selectedCar.id}`, carForm);
+                toast.success("Vehicle updated successfully");
+            } else {
+                await api.post('/cars', carForm);
+                toast.success("New vehicle added to fleet");
+            }
+            setFormModalOpen(false);
+            fetchCars();
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to save vehicle");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteCar = async () => {
+        setIsSubmitting(true);
+        try {
+            await api.delete(`/cars/${selectedCar.id}`);
+            toast.success("Vehicle removed from fleet");
+            setDeleteConfirmOpen(false);
+            fetchCars();
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to delete vehicle");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Basic validation
+        if (!file.type.startsWith('image/')) {
+            toast.error("Please upload an image file");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('document', file);
+
+        setIsUploading(true);
+        try {
+            const response = await api.upload('/upload/document', formData);
+            setCarForm({ ...carForm, imageUrl: response.url });
+            toast.success("Image uploaded successfully");
+        } catch (error) {
+            console.error("Upload error:", error);
+            toast.error("Failed to upload image");
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     const filteredCars = cars.filter(car => {
@@ -97,6 +212,9 @@ const EmployeeCars = () => {
                     <h1 className="text-3xl font-bold tracking-tight text-foreground">Cars Management</h1>
                     <p className="text-muted-foreground mt-1">Manage vehicle inventory and assignments</p>
                 </div>
+                <Button onClick={handleOpenAddModal} className="shadow-md hover:shadow-lg transition-all font-bold">
+                    <Plus className="mr-2 h-4 w-4" /> Add New Vehicle
+                </Button>
             </div>
 
             {/* Stats Grid */}
@@ -235,14 +353,35 @@ const EmployeeCars = () => {
                                             </TableCell>
                                             <TableCell>{getStatusBadge(car.status)}</TableCell>
                                             <TableCell className="text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                                                    onClick={() => handleViewDetails(car)}
-                                                >
-                                                    <Eye size={16} />
-                                                </Button>
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                                        onClick={() => handleViewDetails(car)}
+                                                        title="View Details"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                                        onClick={() => handleOpenEditModal(car)}
+                                                        title="Edit Vehicle"
+                                                    >
+                                                        <Pencil size={16} />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        onClick={() => handleOpenDeleteConfirm(car)}
+                                                        title="Delete Vehicle"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -265,20 +404,22 @@ const EmployeeCars = () => {
                     <TabsContent value="assignments" className="p-6">
                         <div className="space-y-4">
                             <h3 className="font-semibold text-lg">Current Assignments</h3>
-                            {cars.filter(c => c.status === 'Assigned').map((car) => (
-                                <Card key={car.id} className="p-4">
+                            {cars.filter(c => c.status === 'RENTED').map((car) => (
+                                <Card key={car.id} className="p-4 border-l-4 border-l-blue-500">
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <p className="font-medium">{car.model} ({car.plate})</p>
-                                            <p className="text-sm text-muted-foreground">Assigned to: {car.assignedTo}</p>
+                                            <p className="font-medium">{car.make} {car.model} ({car.plateNumber})</p>
+                                            <p className="text-sm text-muted-foreground">Status: Out on rental</p>
                                         </div>
-                                        <Button variant="outline" size="sm">View Details</Button>
+                                        <Button variant="outline" size="sm" onClick={() => handleViewDetails(car)}>
+                                            <Eye className="mr-2 h-4 w-4" /> View Details
+                                        </Button>
                                     </div>
                                 </Card>
                             ))}
-                            {cars.filter(c => c.status === 'Assigned').length === 0 && (
-                                <div className="text-center py-8 text-muted-foreground">
-                                    No cars currently assigned
+                            {cars.filter(c => c.status === 'RENTED').length === 0 && (
+                                <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border-2 border-dashed">
+                                    No cars currently assigned to customers
                                 </div>
                             )}
                         </div>
@@ -286,56 +427,254 @@ const EmployeeCars = () => {
                 </Tabs>
             </Card>
 
+            {/* Add/Edit Car Modal */}
+            <Dialog open={formModalOpen} onOpenChange={setFormModalOpen}>
+                <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>{isEditing ? 'Edit Vehicle' : 'Add New Vehicle'}</DialogTitle>
+                        <DialogDescription>
+                            {isEditing ? `Update information for ${selectedCar?.make} ${selectedCar?.model}` : 'Enter the details of the new vehicle to add to the fleet'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleSaveCar} className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Make</label>
+                                <Input
+                                    required
+                                    value={carForm.make}
+                                    onChange={(e) => setCarForm({ ...carForm, make: e.target.value })}
+                                    placeholder="e.g. Toyota"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Model</label>
+                                <Input
+                                    required
+                                    value={carForm.model}
+                                    onChange={(e) => setCarForm({ ...carForm, model: e.target.value })}
+                                    placeholder="e.g. Corolla"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Year</label>
+                                <Input
+                                    required
+                                    type="number"
+                                    value={carForm.year}
+                                    onChange={(e) => setCarForm({ ...carForm, year: parseInt(e.target.value) })}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Plate Number</label>
+                                <Input
+                                    required
+                                    value={carForm.plateNumber}
+                                    onChange={(e) => setCarForm({ ...carForm, plateNumber: e.target.value })}
+                                    placeholder="e.g. AA 123456"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Category</label>
+                                <Select
+                                    value={carForm.category}
+                                    onValueChange={(val) => setCarForm({ ...carForm, category: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Economy">Economy</SelectItem>
+                                        <SelectItem value="SUV">SUV</SelectItem>
+                                        <SelectItem value="Luxury">Luxury</SelectItem>
+                                        <SelectItem value="Electric">Electric</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Daily Rate (ETB)</label>
+                                <Input
+                                    required
+                                    type="number"
+                                    value={carForm.dailyRate}
+                                    onChange={(e) => setCarForm({ ...carForm, dailyRate: e.target.value })}
+                                    placeholder="e.g. 1500"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Status</label>
+                                <Select
+                                    value={carForm.status}
+                                    onValueChange={(val) => setCarForm({ ...carForm, status: val })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="AVAILABLE">Available</SelectItem>
+                                        <SelectItem value="RENTED">Assigned</SelectItem>
+                                        <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                                        <SelectItem value="UNAVAILABLE">Out of Service</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Location</label>
+                                <Input
+                                    value={carForm.location}
+                                    onChange={(e) => setCarForm({ ...carForm, location: e.target.value })}
+                                    placeholder="e.g. Addis Ababa"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Vehicle Photo</label>
+                            <div className="flex items-center gap-4">
+                                <div className="h-24 w-40 bg-muted rounded-lg border-2 border-dashed flex items-center justify-center overflow-hidden">
+                                    {carForm.imageUrl ? (
+                                        <img src={api.getImageUrl(carForm.imageUrl)} alt="Preview" className="h-full w-full object-cover" />
+                                    ) : (
+                                        <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                                    )}
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                        className="cursor-pointer"
+                                        id="car-image-upload"
+                                    />
+                                    <p className="text-[10px] text-muted-foreground">
+                                        JPEG or PNG. Max size 5MB.
+                                    </p>
+                                    {isUploading && (
+                                        <div className="flex items-center text-xs text-primary animate-pulse">
+                                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                            Uploading...
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Features (comma separated)</label>
+                            <Input
+                                value={carForm.features?.join(', ')}
+                                onChange={(e) => setCarForm({
+                                    ...carForm,
+                                    features: e.target.value.split(',').map(f => f.trim()).filter(f => f !== '')
+                                })}
+                                placeholder="AC, GPS, Bluetooth"
+                            />
+                        </div>
+
+                        <DialogFooter className="pt-4">
+                            <Button type="button" variant="outline" onClick={() => setFormModalOpen(false)}>
+                                <X className="mr-2 h-4 w-4" /> Cancel
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                {isEditing ? 'Update Vehicle' : 'Add Vehicle'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
             {/* Car Details Modal */}
             <Dialog open={detailsModalOpen} onOpenChange={setDetailsModalOpen}>
                 <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
-                        <DialogTitle>Car Details - {selectedCar?.id}</DialogTitle>
+                        <DialogTitle>Vehicle Details - #{selectedCar?.id}</DialogTitle>
                         <DialogDescription>
-                            Complete information about {selectedCar?.model}
+                            Complete information about the selected fleet vehicle
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Make & Model</p>
-                                <p className="text-sm font-semibold">{selectedCar?.make} {selectedCar?.model}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Year</p>
-                                <p className="text-sm font-semibold">{selectedCar?.year}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Plate Number</p>
-                                <p className="text-sm font-semibold font-mono">{selectedCar?.plateNumber}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Category</p>
-                                <p className="text-sm font-semibold">{selectedCar?.category}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Daily Rate</p>
-                                <p className="text-sm font-semibold text-primary">ETB {Number(selectedCar?.dailyRate).toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Status</p>
-                                {selectedCar && getStatusBadge(selectedCar.status)}
-                            </div>
-                        </div>
-                        {selectedCar?.features && selectedCar.features.length > 0 && (
-                            <div className="pt-4 border-t">
-                                <p className="text-sm font-medium text-muted-foreground mb-2">Features</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedCar.features.map((f, i) => (
-                                        <Badge key={i} variant="secondary" className="text-[10px]">{f}</Badge>
-                                    ))}
+                    {selectedCar && (
+                        <div className="space-y-6 py-4">
+                            <div className="flex gap-6 items-start">
+                                <div className="w-1/3 aspect-video bg-muted rounded-lg flex items-center justify-center overflow-hidden border">
+                                    {selectedCar.imageUrl ? (
+                                        <img src={api.getImageUrl(selectedCar.imageUrl)} alt={selectedCar.model} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <Car className="h-10 w-10 text-muted-foreground/40" />
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-xl font-bold">{selectedCar.make} {selectedCar.model}</h3>
+                                    <p className="text-muted-foreground">{selectedCar.year} | {selectedCar.category}</p>
+                                    <div className="mt-2">{getStatusBadge(selectedCar.status)}</div>
                                 </div>
                             </div>
-                        )}
-                    </div>
+
+                            <div className="grid grid-cols-2 gap-y-4 gap-x-8 p-4 bg-muted/30 rounded-lg border">
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Plate Number</p>
+                                    <p className="text-sm font-semibold font-mono">{selectedCar.plateNumber}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Daily Rate</p>
+                                    <p className="text-sm font-semibold text-primary">ETB {Number(selectedCar.dailyRate).toLocaleString()}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</p>
+                                    <p className="text-sm font-semibold">{selectedCar.location || "Central Terminal"}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Fleet ID</p>
+                                    <p className="text-sm font-semibold font-mono">TCR-{selectedCar.id.toString().padStart(4, '0')}</p>
+                                </div>
+                            </div>
+
+                            {selectedCar.features && selectedCar.features.length > 0 && (
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium">Features & Specifications</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedCar.features.map((f, i) => (
+                                            <Badge key={i} variant="secondary" className="px-2 py-0 text-[10px]">{f}</Badge>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setDetailsModalOpen(false)}>Close</Button>
+                        <Button onClick={() => {
+                            setDetailsModalOpen(false);
+                            handleOpenEditModal(selectedCar);
+                        }}>
+                            <Pencil className="mr-2 h-4 w-4" /> Edit Vehicle
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Modal */}
+            <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                <DialogContent className="sm:max-w-[400px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-red-600 font-bold">Delete Vehicle</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to remove <strong>{selectedCar?.make} {selectedCar?.model} ({selectedCar?.plateNumber})</strong> from the fleet?
+                            This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="pt-4 flex gap-2">
+                        <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteCar}
+                            disabled={isSubmitting}
+                            className="font-bold"
+                        >
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                            Delete Vehicle
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

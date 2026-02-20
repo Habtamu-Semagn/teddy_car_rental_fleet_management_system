@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Car, Plus, Search, Filter, Edit, Trash2,
-    CheckCircle2, AlertCircle, Clock, Loader2
+    CheckCircle2, AlertCircle, Clock, Loader2, Upload, ImageIcon
 } from 'lucide-react';
 
 // Shadcn Components
@@ -42,6 +42,7 @@ const AdminCars = () => {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingCar, setEditingCar] = useState(null);
     const [submitting, setSubmitting] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     const [formData, setFormData] = useState({
         make: '',
@@ -143,6 +144,30 @@ const AdminCars = () => {
         }
     };
 
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert("Please upload an image file");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('document', file);
+
+        setIsUploading(true);
+        try {
+            const response = await api.upload('/upload/document', formData);
+            setFormData({ ...formData, imageUrl: response.url });
+        } catch (error) {
+            console.error("Upload error:", error);
+            alert("Failed to upload image");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const getStatusBadge = (status) => {
         const s = status ? status.toUpperCase() : 'UNKNOWN';
         switch (s) {
@@ -231,7 +256,7 @@ const AdminCars = () => {
                                     <div className="flex items-center gap-3">
                                         <div className="h-10 w-10 rounded bg-muted flex items-center justify-center text-muted-foreground overflow-hidden">
                                             {car.imageUrl ? (
-                                                <img src={car.imageUrl} alt={car.model} className="object-cover w-full h-full" />
+                                                <img src={api.getImageUrl(car.imageUrl)} alt={car.model} className="object-cover w-full h-full" />
                                             ) : (
                                                 <Car size={20} />
                                             )}
@@ -312,8 +337,29 @@ const AdminCars = () => {
                             <Input id="features" value={formData.features} onChange={e => setFormData({ ...formData, features: e.target.value })} placeholder="AC, Bluetooth, GPS..." />
                         </div>
                         <div className="col-span-2 space-y-2">
-                            <Label htmlFor="imageUrl">Image URL</Label>
-                            <Input id="imageUrl" value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} placeholder="https://..." />
+                            <Label>Vehicle Photo</Label>
+                            <div className="flex items-center gap-4 p-4 border rounded-lg bg-muted/30">
+                                <div className="h-20 w-32 rounded bg-muted flex items-center justify-center overflow-hidden border">
+                                    {formData.imageUrl ? (
+                                        <img src={api.getImageUrl(formData.imageUrl)} alt="Preview" className="object-cover h-full w-full" />
+                                    ) : (
+                                        <ImageIcon className="text-muted-foreground/40" size={24} />
+                                    )}
+                                </div>
+                                <div className="flex-1 space-y-2">
+                                    <Input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                        className="h-9 text-xs cursor-pointer"
+                                    />
+                                    {isUploading && (
+                                        <p className="text-xs text-primary animate-pulse flex items-center gap-1">
+                                            <Loader2 size={12} className="animate-spin" /> Uploading...
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         <DialogFooter className="col-span-2 mt-4">
