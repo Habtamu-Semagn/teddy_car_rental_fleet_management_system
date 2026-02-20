@@ -3,34 +3,68 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileText, PenTool } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '@/api';
+import { useAuth } from '../context/AuthContext';
 
 const Agreement = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { user, refreshUser, isAuthenticated, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(false);
     const [signature, setSignature] = useState('');
     const [agreed, setAgreed] = useState(false);
     const carId = searchParams.get('carId');
 
+    // Skip if already signed
     useEffect(() => {
-        if (!carId) {
-            navigate('/');
+        if (!authLoading && isAuthenticated && user?.profile?.agreementSigned) {
+            if (carId) {
+                navigate(`/payment?carId=${carId}`);
+            } else {
+                navigate('/');
+            }
         }
-    }, [carId, navigate]);
+    }, [authLoading, isAuthenticated, user, carId, navigate]);
 
-    const handleSubmit = (e) => {
+    // Unified Agreement: No longer blocks without carId.
+    // This allows setup during registration.
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!signature || !agreed) return;
 
         setLoading(true);
-        // Simulate signing
-        setTimeout(() => {
+        try {
+            // Save agreement to profile
+            await api.patch('/auth/profile', {
+                agreementSigned: true,
+                // Pass existing details to avoid clearing them if upsert logic needs them
+                firstName: user?.profile?.firstName,
+                lastName: user?.profile?.lastName,
+                phoneNumber: user?.profile?.phoneNumber
+            });
+
+            // Sync local state
+            await refreshUser();
+
+            if (carId) {
+                navigate(`/payment?carId=${carId}`);
+            } else {
+                toast.success('Onboarding complete! You can now book your first car.');
+                navigate('/');
+            }
+        } catch (error) {
+            toast.error(error.message || 'Failed to save agreement. Please try again.');
+        } finally {
             setLoading(false);
-            toast.success('Agreement signed successfully!');
-            const redirectPath = carId ? `/payment?carId=${carId}` : '/payment';
-            navigate(redirectPath);
-        }, 1000);
+        }
     };
+
+    if (authLoading) {
+        return <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>;
+    }
 
     return (
         <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8 min-h-screen bg-gray-50">

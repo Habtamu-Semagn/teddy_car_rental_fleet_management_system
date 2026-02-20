@@ -142,6 +142,19 @@ const updateBookingStatus = async (req, res) => {
             }
         });
 
+        // Sync Car Status
+        if (status === 'ACTIVE' && booking.carId) {
+            await prisma.car.update({
+                where: { id: booking.carId },
+                data: { status: 'RENTED' }
+            });
+        } else if (status === 'COMPLETED' && booking.carId) {
+            await prisma.car.update({
+                where: { id: booking.carId },
+                data: { status: 'AVAILABLE' }
+            });
+        }
+
         res.json(booking);
 
     } catch (error) {

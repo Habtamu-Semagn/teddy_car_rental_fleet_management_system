@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     CheckCircle, XCircle, Eye, FileCheck, ClipboardCheck, AlertCircle, TrendingUp,
-    Loader2, Navigation
+    Loader2, Navigation, Flag
 } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -45,6 +45,7 @@ const EmployeeDashboard = () => {
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [assignCarModalOpen, setAssignCarModalOpen] = useState(false);
     const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+    const [completeModalOpen, setCompleteModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [verificationNotes, setVerificationNotes] = useState('');
     const [rejectionReason, setRejectionReason] = useState('');
@@ -220,6 +221,25 @@ const EmployeeDashboard = () => {
         } catch (error) {
             console.error('Failed to assign car:', error);
             toast.error(error.message || "Failed to assign car", { id: 'assign-task' });
+        }
+    };
+
+    const confirmTripCompletion = async () => {
+        if (!selectedRequest?.id) {
+            toast.error("No request selected");
+            return;
+        }
+        try {
+            toast.loading("Finalizing trip...", { id: 'complete-task' });
+            const updatedBooking = await api.patch(`/bookings/${selectedRequest.id}/status`, {
+                status: 'COMPLETED'
+            });
+            setRequests(prev => prev.map(r => r.id === selectedRequest.id ? updatedBooking : r));
+            setCompleteModalOpen(false);
+            toast.success("Trip marked as completed!", { id: 'complete-task' });
+        } catch (error) {
+            console.error('Failed to complete trip:', error);
+            toast.error(error.message || "Failed to complete trip", { id: 'complete-task' });
         }
     };
 
@@ -403,6 +423,20 @@ const EmployeeDashboard = () => {
                                                     <FileCheck size={16} />
                                                 </Button>
                                             )}
+                                            {req.status === 'ACTIVE' && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-orange-600 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                                                    title="Complete Trip"
+                                                    onClick={() => {
+                                                        setSelectedRequest(req);
+                                                        setCompleteModalOpen(true);
+                                                    }}
+                                                >
+                                                    <Flag size={16} />
+                                                </Button>
+                                            )}
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -498,62 +532,64 @@ const EmployeeDashboard = () => {
 
             <Dialog open={approveModalOpen} onOpenChange={setApproveModalOpen}>
                 <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Approve Booking - {selectedRequest?.id}</DialogTitle>
-                        <DialogDescription>
-                            Confirm booking approval for {selectedRequest?.customer}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-3 bg-muted/30 p-4 rounded-lg border">
-                            <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground mb-2">Customer & Booking</h4>
-                            <div className="grid grid-cols-2 gap-y-2 text-sm">
-                                <span className="text-muted-foreground">Customer:</span>
-                                <span className="font-medium">{selectedRequest?.user?.customerProfile ? `${selectedRequest.user.customerProfile.firstName} ${selectedRequest.user.customerProfile.lastName}` : 'N/A'}</span>
+                    <div className="max-h-[70vh] overflow-y-auto px-1">
+                        <DialogHeader className="mb-4">
+                            <DialogTitle>Approve Booking - {selectedRequest?.id}</DialogTitle>
+                            <DialogDescription>
+                                Confirm booking approval for {selectedRequest?.customer}
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="space-y-3 bg-muted/30 p-4 rounded-lg border">
+                                <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground mb-2">Customer & Booking</h4>
+                                <div className="grid grid-cols-2 gap-y-2 text-sm">
+                                    <span className="text-muted-foreground">Customer:</span>
+                                    <span className="font-medium">{selectedRequest?.user?.customerProfile ? `${selectedRequest.user.customerProfile.firstName} ${selectedRequest.user.customerProfile.lastName}` : 'N/A'}</span>
 
-                                <span className="text-muted-foreground">Vehicle:</span>
-                                <span className="font-medium">{selectedRequest?.car?.make} {selectedRequest?.car?.model}</span>
+                                    <span className="text-muted-foreground">Vehicle:</span>
+                                    <span className="font-medium">{selectedRequest?.car?.make} {selectedRequest?.car?.model}</span>
 
-                                <span className="text-muted-foreground">Period:</span>
-                                <span className="font-medium">{selectedRequest ? `${new Date(selectedRequest.startDate).toLocaleDateString()} - ${new Date(selectedRequest.endDate).toLocaleDateString()}` : ''}</span>
+                                    <span className="text-muted-foreground">Period:</span>
+                                    <span className="font-medium">{selectedRequest ? `${new Date(selectedRequest.startDate).toLocaleDateString()} - ${new Date(selectedRequest.endDate).toLocaleDateString()}` : ''}</span>
 
-                                <span className="text-muted-foreground">Amount:</span>
-                                <span className="font-bold text-primary">{Number(selectedRequest?.totalAmount).toLocaleString()} ETB</span>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3 bg-primary/5 p-4 rounded-lg border border-primary/20">
-                            <h4 className="font-bold text-sm uppercase tracking-wider text-primary mb-2">Payment Verification</h4>
-                            <div className="grid grid-cols-2 gap-y-2 text-sm">
-                                <span className="text-muted-foreground">Method:</span>
-                                <span className="font-bold">{selectedRequest?.payment?.method || 'N/A'}</span>
-
-                                <span className="text-muted-foreground">Identifier (Phone/Acc):</span>
-                                <span className="font-bold text-blue-600">{selectedRequest?.payment?.payerIdentifier || 'N/A'}</span>
-
-                                <span className="text-muted-foreground">Transaction ID:</span>
-                                <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border">{selectedRequest?.payment?.transactionId || 'N/A'}</span>
-                            </div>
-                        </div>
-
-                        {selectedRequest?.isDelivery && (
-                            <div className="space-y-3 bg-orange-50 p-4 rounded-lg border border-orange-200 animate-in fade-in slide-in-from-top-2">
-                                <h4 className="font-bold text-sm uppercase tracking-wider text-orange-700 mb-2 flex items-center gap-2">
-                                    <AlertCircle size={16} /> Driver Assignment Required
-                                </h4>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-orange-800">Assign Company Driver Name</label>
-                                    <Textarea
-                                        placeholder="Enter the name of the driver assigned to this delivery..."
-                                        value={driverName}
-                                        onChange={(e) => setDriverName(e.target.value)}
-                                        rows={2}
-                                        className="border-orange-200 focus:ring-orange-500"
-                                    />
-                                    <p className="text-[10px] text-orange-600">This pickup is outside the office radius.</p>
+                                    <span className="text-muted-foreground">Amount:</span>
+                                    <span className="font-bold text-primary">{Number(selectedRequest?.totalAmount).toLocaleString()} ETB</span>
                                 </div>
                             </div>
-                        )}
+
+                            <div className="space-y-3 bg-primary/5 p-4 rounded-lg border border-primary/20">
+                                <h4 className="font-bold text-sm uppercase tracking-wider text-primary mb-2">Payment Verification</h4>
+                                <div className="grid grid-cols-2 gap-y-2 text-sm">
+                                    <span className="text-muted-foreground">Method:</span>
+                                    <span className="font-bold">{selectedRequest?.payment?.method || 'N/A'}</span>
+
+                                    <span className="text-muted-foreground">Identifier (Phone/Acc):</span>
+                                    <span className="font-bold text-blue-600">{selectedRequest?.payment?.payerIdentifier || 'N/A'}</span>
+
+                                    <span className="text-muted-foreground">Transaction ID:</span>
+                                    <span className="font-mono font-bold bg-white px-2 py-0.5 rounded border">{selectedRequest?.payment?.transactionId || 'N/A'}</span>
+                                </div>
+                            </div>
+
+                            {selectedRequest?.isDelivery && (
+                                <div className="space-y-3 bg-orange-50 p-4 rounded-lg border border-orange-200 animate-in fade-in slide-in-from-top-2">
+                                    <h4 className="font-bold text-sm uppercase tracking-wider text-orange-700 mb-2 flex items-center gap-2">
+                                        <AlertCircle size={16} /> Driver Assignment Required
+                                    </h4>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-orange-800">Assign Company Driver Name</label>
+                                        <Textarea
+                                            placeholder="Enter the name of the driver assigned to this delivery..."
+                                            value={driverName}
+                                            onChange={(e) => setDriverName(e.target.value)}
+                                            rows={2}
+                                            className="border-orange-200 focus:ring-orange-500"
+                                        />
+                                        <p className="text-[10px] text-orange-600">This pickup is outside the office radius.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setApproveModalOpen(false)}>Cancel</Button>
@@ -589,6 +625,32 @@ const EmployeeDashboard = () => {
                         <Button variant="destructive" onClick={confirmRejection}>
                             <XCircle size={16} className="mr-2" />
                             Reject Booking
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={completeModalOpen} onOpenChange={setCompleteModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Complete Trip - #{selectedRequest?.id}</DialogTitle>
+                        <DialogDescription>
+                            Confirm that the car has been returned and the rental period for {selectedRequest?.user?.customerProfile?.firstName} is finished.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-6 flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center">
+                            <Flag size={32} />
+                        </div>
+                        <p className="text-center text-sm text-gray-500">
+                            This will notify the customer that their journey is officially completed.
+                            The vehicle will be marked as available for new bookings.
+                        </p>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCompleteModalOpen(false)}>Cancel</Button>
+                        <Button onClick={confirmTripCompletion} className="bg-orange-600 hover:bg-orange-700">
+                            Confirm Completion
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -119,18 +119,40 @@ const getProfile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
     try {
-        const { idCardUrl, driverLicenseUrl, address, phoneNumber } = req.body;
+        const { idCardUrl, driverLicenseUrl, address, phoneNumber, agreementSigned, firstName, lastName } = req.body;
         const userId = req.user.id;
 
-        const updatedProfile = await prisma.customerProfile.update({
+        console.log(`Updating profile for user ${userId}:`, req.body);
+
+        // Ensure only customers have profiles
+        if (req.user.role !== 'CUSTOMER') {
+            return res.status(400).json({ message: 'Only customers have profiles' });
+        }
+
+        const updatedProfile = await prisma.customerProfile.upsert({
             where: { userId },
-            data: {
+            update: {
+                idCardUrl: idCardUrl !== undefined ? idCardUrl : undefined,
+                driverLicenseUrl: driverLicenseUrl !== undefined ? driverLicenseUrl : undefined,
+                address: address !== undefined ? address : undefined,
+                phoneNumber: phoneNumber !== undefined ? phoneNumber : undefined,
+                agreementSigned: agreementSigned !== undefined ? agreementSigned : undefined,
+                firstName: firstName !== undefined ? firstName : undefined,
+                lastName: lastName !== undefined ? lastName : undefined,
+            },
+            create: {
+                userId,
+                firstName: firstName || '',
+                lastName: lastName || '',
+                phoneNumber: phoneNumber || '',
                 idCardUrl,
                 driverLicenseUrl,
                 address,
-                phoneNumber
+                agreementSigned: agreementSigned || false
             }
         });
+
+        console.log('Profile updated successfully:', updatedProfile.id);
 
         res.json({
             message: 'Profile updated successfully',
@@ -138,7 +160,7 @@ const updateProfile = async (req, res) => {
         });
     } catch (error) {
         console.error('Update profile error:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        res.status(500).json({ message: 'Internal server error: ' + error.message });
     }
 };
 

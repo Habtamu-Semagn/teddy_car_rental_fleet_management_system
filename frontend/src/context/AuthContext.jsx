@@ -7,21 +7,22 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const checkAuth = async () => {
-            const token = localStorage.getItem('teddy_token');
-            if (token) {
-                try {
-                    const userData = await api.get('/auth/profile');
-                    setUser(userData);
-                } catch (error) {
-                    localStorage.removeItem('teddy_token');
-                    setUser(null);
-                }
+    const refreshUser = async () => {
+        const token = localStorage.getItem('teddy_token');
+        if (token) {
+            try {
+                const userData = await api.get('/auth/profile');
+                setUser(userData);
+                return userData;
+            } catch (error) {
+                localStorage.removeItem('teddy_token');
+                setUser(null);
             }
-            setLoading(false);
-        };
-        checkAuth();
+        }
+    };
+
+    useEffect(() => {
+        refreshUser().finally(() => setLoading(false));
     }, []);
 
     const login = async (email, password) => {
@@ -44,7 +45,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, register, loading, isAuthenticated: !!user }}>
+        <AuthContext.Provider value={{ user, login, logout, register, loading, isAuthenticated: !!user, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

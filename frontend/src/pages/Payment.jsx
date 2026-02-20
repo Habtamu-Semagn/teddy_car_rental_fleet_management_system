@@ -11,7 +11,7 @@ import MapSelector from '@/components/MapSelector';
 const Payment = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const { user } = useAuth();
+    const { user, isAuthenticated } = useAuth();
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [car, setCar] = useState(null);
@@ -35,6 +35,10 @@ const Payment = () => {
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!isAuthenticated) {
+                navigate(`/login?carId=${carId}`);
+                return;
+            }
             if (!carId) {
                 navigate('/');
                 return;

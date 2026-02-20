@@ -6,8 +6,15 @@ const getAllCars = async (req, res) => {
 
         const where = {
             category: category === 'All' ? undefined : (category || undefined),
-            status: status || undefined
         };
+
+        // If specific status requested (e.g. from Admin/Employee panel)
+        if (status) {
+            where.status = status;
+        } else {
+            // General public view: always exclude maintenance/unavailable
+            where.status = { notIn: ['MAINTENANCE', 'UNAVAILABLE'] };
+        }
 
         // If dates are provided, filter out cars that are already booked in that range
         if (startDate && endDate) {

@@ -28,20 +28,25 @@ const Login = () => {
                 navigate('/employee/dashboard');
             } else {
                 const hasDocs = user.profile?.idCardUrl && user.profile?.driverLicenseUrl;
+                const hasAgreement = user.profile?.agreementSigned;
 
                 if (carId) {
                     // During booking flow
-                    if (hasDocs) {
+                    if (!hasDocs) {
+                        navigate(`/upload-docs?carId=${carId}`);
+                    } else if (!hasAgreement) {
                         navigate(`/agreement?carId=${carId}`);
                     } else {
-                        navigate(`/upload-docs?carId=${carId}`);
+                        navigate(`/payment?carId=${carId}`);
                     }
                 } else {
                     // General login
-                    if (hasDocs) {
-                        navigate('/');
-                    } else {
+                    if (!hasDocs) {
                         navigate('/upload-docs');
+                    } else if (!hasAgreement) {
+                        navigate('/agreement');
+                    } else {
+                        navigate('/');
                     }
                 }
             }

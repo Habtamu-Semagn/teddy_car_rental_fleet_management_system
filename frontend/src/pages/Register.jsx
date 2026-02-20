@@ -20,15 +20,8 @@ const Register = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        const startDate = sessionStorage.getItem('startDate');
-        const endDate = sessionStorage.getItem('endDate');
-
-        if (!carId || !startDate || !endDate) {
-            toast.error('Please select a car and rental dates first.');
-            navigate('/');
-        }
-    }, [searchParams, navigate]);
+    // Unified Registration: No longer blocks without carId.
+    // If carId flows in from Home, we keep it for redirecting at the end of onboarding.
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -54,7 +47,7 @@ const Register = () => {
             if (carId) {
                 navigate(`/upload-docs?carId=${carId}`);
             } else {
-                navigate('/');
+                navigate('/upload-docs');
             }
         } catch (err) {
             const msg = err.message || 'Registration failed';

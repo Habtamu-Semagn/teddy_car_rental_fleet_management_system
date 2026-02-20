@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { api } from '@/api';
 import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 
 const UploadDocs = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const { user, refreshUser, isAuthenticated, loading: authLoading } = useAuth();
     const [loading, setLoading] = useState(false);
     const [files, setFiles] = useState({ idCard: null, license: null });
     const carId = searchParams.get('carId');
+
+    // Skip if already uploaded
+    useEffect(() => {
+        if (!authLoading && isAuthenticated && user?.profile?.idCardUrl && user?.profile?.driverLicenseUrl) {
+            if (carId) {
+                navigate(`/agreement?carId=${carId}`);
+            } else {
+                navigate('/agreement');
+            }
+        }
+    }, [authLoading, isAuthenticated, user, carId, navigate]);
 
     const handleFileChange = (e, type) => {
         const file = e.target.files[0];
@@ -41,8 +54,15 @@ const UploadDocs = () => {
             // Persist to backend profile
             await api.patch('/auth/profile', {
                 idCardUrl,
-                driverLicenseUrl: licenseUrl
+                driverLicenseUrl: licenseUrl,
+                // Pass existing details to avoid clearing them if upsert logic needs them
+                firstName: user?.profile?.firstName,
+                lastName: user?.profile?.lastName,
+                phoneNumber: user?.profile?.phoneNumber
             });
+
+            // Sync local state
+            await refreshUser();
 
             // Store URLs in session storage for the final booking step (as fallback)
             sessionStorage.setItem('idCardUrl', idCardUrl);
@@ -51,7 +71,7 @@ const UploadDocs = () => {
             if (carId) {
                 navigate(`/agreement?carId=${carId}`);
             } else {
-                navigate('/');
+                navigate('/agreement');
             }
         } catch (error) {
             toast.error(error.message || 'Failed to upload documents. Please try again.');
@@ -59,6 +79,12 @@ const UploadDocs = () => {
             setLoading(false);
         }
     };
+
+    if (authLoading) {
+        return <div className="min-h-screen flex items-center justify-center bg-gray-50">
+            <div className="h-10 w-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        </div>;
+    }
 
     return (
         <div className="max-w-3xl mx-auto py-12 px-4 sm:px-6 lg:px-8">

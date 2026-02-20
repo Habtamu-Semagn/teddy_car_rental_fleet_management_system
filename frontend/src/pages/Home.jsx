@@ -7,8 +7,11 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
 
+import { useAuth } from '../context/AuthContext';
+
 const Home = () => {
     const navigate = useNavigate();
+    const { isAuthenticated, user } = useAuth();
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -28,7 +31,21 @@ const Home = () => {
             window.scrollTo({ top: 300, behavior: 'smooth' }); // Scroll to search bar
             return;
         }
-        navigate(`/login?carId=${carId}`);
+
+        if (isAuthenticated) {
+            const hasDocs = user.profile?.idCardUrl && user.profile?.driverLicenseUrl;
+            const hasAgreement = user.profile?.agreementSigned;
+
+            if (!hasDocs) {
+                navigate(`/upload-docs?carId=${carId}`);
+            } else if (!hasAgreement) {
+                navigate(`/agreement?carId=${carId}`);
+            } else {
+                navigate(`/payment?carId=${carId}`);
+            }
+        } else {
+            navigate(`/login?carId=${carId}`);
+        }
     };
 
     useEffect(() => {
@@ -183,11 +200,16 @@ const Home = () => {
                                     <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold shadow-sm uppercase tracking-wider text-gray-800 border border-gray-100">
                                         {car.category}
                                     </div>
-                                    {car.status !== 'AVAILABLE' && (
+                                    {car.status === 'RENTED' && (!startDate || !endDate) && (
                                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[2px]">
                                             <span className="bg-red-500 text-white px-4 py-2 rounded-full font-bold shadow-lg transform -rotate-12 border-2 border-white">
-                                                {car.status}
+                                                RENTED
                                             </span>
+                                        </div>
+                                    )}
+                                    {car.status === 'RENTED' && startDate && endDate && (
+                                        <div className="absolute top-4 left-4 bg-green-500/90 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black shadow-lg uppercase tracking-widest text-white border border-white/20 animate-in fade-in zoom-in duration-500">
+                                            Available for dates
                                         </div>
                                     )}
                                 </div>
@@ -215,13 +237,13 @@ const Home = () => {
 
                                     <div className="mt-auto">
                                         <button
-                                            onClick={() => car.status === 'AVAILABLE' ? handleBookNow(car.id) : null}
-                                            className={`block w-full text-center py-4 rounded-xl font-bold text-sm tracking-wide transition-all uppercase ${car.status === 'AVAILABLE'
+                                            onClick={() => (car.status === 'AVAILABLE' || (startDate && endDate)) ? handleBookNow(car.id) : null}
+                                            className={`block w-full text-center py-4 rounded-xl font-bold text-sm tracking-wide transition-all uppercase ${(car.status === 'AVAILABLE' || (startDate && endDate))
                                                 ? 'bg-gray-900 text-white hover:bg-primary hover:text-gray-900 shadow-md hover:shadow-lg transform active:scale-[0.98]'
                                                 : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                                                 }`}
                                         >
-                                            {car.status === 'AVAILABLE' ? 'Book Now' : 'Currently Unavailable'}
+                                            {(car.status === 'AVAILABLE' || (startDate && endDate)) ? 'Book Now' : 'Currently Unavailable'}
                                         </button>
                                     </div>
                                 </div>
