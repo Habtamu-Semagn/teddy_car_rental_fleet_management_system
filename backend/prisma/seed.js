@@ -102,7 +102,32 @@ async function main() {
             location: 'Airport'
         }
     });
-    console.log('Cars created:', car1.plateNumber, car2.plateNumber);
+
+    const cars = [
+        { make: 'Hyundai', model: 'Accent', year: 2021, plateNumber: 'AA-2-11111', category: 'Economy', dailyRate: 1200, features: ['AC', 'USB'], location: 'Main Office' },
+        { make: 'Suzuki', model: 'Swift', year: 2022, plateNumber: 'AA-2-22222', category: 'Economy', dailyRate: 1100, features: ['Compact', 'Fuel Efficient'], location: 'Bole' },
+        { make: 'Toyota', model: 'Rav4', year: 2019, plateNumber: 'AA-2-33333', category: 'SUV', dailyRate: 2500, features: ['AC', 'AWD', 'Spacious'], location: 'Main Office' },
+        { make: 'Hyundai', model: 'Tucson', year: 2023, plateNumber: 'AA-2-44444', category: 'SUV', dailyRate: 3000, features: ['AC', 'Sunroof', 'Bluetooth'], location: 'Airport' },
+        { make: 'Mercedes', model: 'C-Class', year: 2021, plateNumber: 'AA-2-55555', category: 'Luxury', dailyRate: 6000, features: ['Premium Sound', 'Leather', 'AC'], location: 'Airport' },
+        { make: 'Ford', model: 'Explorer', year: 2020, plateNumber: 'AA-2-66666', category: 'SUV', dailyRate: 3200, features: ['7-Seater', 'Tow Hitch', 'AC'], location: 'Piazza' },
+        { make: 'Kia', model: 'Cerato', year: 2022, plateNumber: 'AA-2-77777', category: 'Economy', dailyRate: 1400, features: ['AC', 'Bluetooth', 'Reverse Camera'], location: 'Main Office' },
+        { make: 'Audi', model: 'A6', year: 2022, plateNumber: 'AA-2-88888', category: 'Luxury', dailyRate: 7000, features: ['Matrix LED', 'Leather', 'Quattro'], location: 'Airport' },
+        { make: 'Mitsubishi', model: 'Pajero', year: 2018, plateNumber: 'AA-2-99999', category: 'SUV', dailyRate: 2800, features: ['Rugged', '4WD', 'AC'], location: 'Main Office' },
+        { make: 'Toyota', model: 'HiAce', year: 2021, plateNumber: 'AA-2-10101', category: 'Van', dailyRate: 2200, features: ['12-Seater', 'AC', 'High Roof'], location: 'Megenagna' }
+    ];
+
+    for (const carData of cars) {
+        await prisma.car.upsert({
+            where: { plateNumber: carData.plateNumber },
+            update: {},
+            create: {
+                ...carData,
+                status: 'AVAILABLE'
+            }
+        });
+    }
+
+    console.log('Cars created: basic and additional 10 cars added.');
 
     // Create a booking with new fields
     const booking = await prisma.booking.create({
