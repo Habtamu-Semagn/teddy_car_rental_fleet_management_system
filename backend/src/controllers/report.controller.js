@@ -2,12 +2,12 @@ const prisma = require('../utils/prismaClient');
 
 const getFinancialOverview = async (req, res) => {
     try {
-        // Total Revenue from all SUCCESSFUL payments
-        const totalRevenueResult = await prisma.payment.aggregate({
-            where: { status: 'SUCCESS' },
-            _sum: { amount: true }
+        // Total Revenue from all COMPLETED bookings
+        const totalRevenueResult = await prisma.booking.aggregate({
+            where: { status: 'COMPLETED' },
+            _sum: { totalAmount: true }
         });
-        const totalRevenue = totalRevenueResult._sum.amount || 0;
+        const totalRevenue = totalRevenueResult._sum.totalAmount || 0;
 
         // Total Expenses from Maintenance (as a proxy for now)
         const totalExpensesResult = await prisma.maintenance.aggregate({
@@ -16,7 +16,7 @@ const getFinancialOverview = async (req, res) => {
         });
         const totalExpenses = totalExpensesResult._sum.cost || 0;
 
-        const netProfit = totalRevenue - totalExpenses;
+        const netProfit = Number(totalRevenue) - Number(totalExpenses);
 
         // Stats for cards
         const pendingBookings = await prisma.booking.count({ where: { status: 'PENDING' } });
@@ -25,10 +25,10 @@ const getFinancialOverview = async (req, res) => {
 
         res.json({
             summary: {
-                totalRevenue,
-                totalExpenses,
+                totalRevenue: Number(totalRevenue),
+                totalExpenses: Number(totalExpenses),
                 netProfit,
-                profitMargin: totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0
+                profitMargin: Number(totalRevenue) > 0 ? (netProfit / Number(totalRevenue)) * 100 : 0
             },
             stats: {
                 pendingBookings,

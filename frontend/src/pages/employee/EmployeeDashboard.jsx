@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { format } from "date-fns";
 import {
-    CheckCircle, XCircle, Eye, FileCheck, ClipboardCheck, AlertCircle, TrendingUp,
-    Loader2, Navigation, Flag
+    CheckCircle, CheckCircle2, XCircle, Eye, FileCheck, ClipboardCheck, AlertCircle, TrendingUp,
+    Loader2, Navigation, Flag, Car as CarIcon
 } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Table,
@@ -38,6 +40,22 @@ import EmployeeLayout from "@/components/employee-layout";
 import { api } from "@/api";
 import MapSelector from "@/components/MapSelector";
 
+// Helper function to parse coordinates from pickupLocation string
+const parseCoordinates = (locationString) => {
+    if (!locationString) return null;
+
+    // Check if it's in the format "Lat: X.XX, Lng: Y.YY" or "Address (Lat: X, Lng: Y)"
+    const coordMatch = locationString.match(/Lat:\s*([\d.-]+),?\s*Lng:\s*([\d.-]+)/i);
+    if (coordMatch && coordMatch[1] && coordMatch[2]) {
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2].replace(')', '')); // Handle case where it ends with )
+        if (!isNaN(lat) && !isNaN(lng)) {
+            return [lat, lng];
+        }
+    }
+    return null;
+};
+
 const EmployeeDashboard = () => {
     // Modal states
     const [verifyModalOpen, setVerifyModalOpen] = useState(false);
@@ -51,6 +69,7 @@ const EmployeeDashboard = () => {
     const [rejectionReason, setRejectionReason] = useState('');
     const [selectedCar, setSelectedCar] = useState('');
     const [driverName, setDriverName] = useState('');
+    const [driverPhone, setDriverPhone] = useState('');
 
     const [requests, setRequests] = useState([]);
     const [availableCars, setAvailableCars] = useState([]);
@@ -204,23 +223,44 @@ const EmployeeDashboard = () => {
             toast.error("No request selected");
             return;
         }
-        if (!selectedCar) {
-            toast.error("Please select a car");
+
+        // If pickup is outside office radius, require driver details
+        if (selectedRequest.isDelivery && !driverName) {
+            toast.error("Please enter driver name for delivery");
             return;
         }
+        if (selectedRequest.isDelivery && !driverPhone) {
+            toast.error("Please enter driver phone for delivery");
+            return;
+        }
+
         try {
-            toast.loading("Assigning car...", { id: 'assign-task' });
-            const updatedBooking = await api.patch(`/bookings/${selectedRequest.id}/status`, {
-                status: 'ACTIVE',
-                carId: selectedCar
-            });
+            toast.loading("Starting trip...", { id: 'assign-task' });
+            // Car is already assigned by customer - just update status to ACTIVE
+            // Include driver details if provided
+            const updateData = {
+                status: 'ACTIVE'
+            };
+
+            // Add driver name if provided
+            if (driverName) {
+                updateData.assignedDriver = driverName;
+            }
+            // Add driver phone if provided
+            if (driverPhone) {
+                updateData.driverPhone = driverPhone;
+            }
+
+            const updatedBooking = await api.patch(`/bookings/${selectedRequest.id}/status`, updateData);
             setRequests(prev => prev.map(r => r.id === selectedRequest.id ? updatedBooking : r));
             setAssignCarModalOpen(false);
             setSelectedCar('');
-            toast.success("Car assigned successfully", { id: 'assign-task' });
+            setDriverName('');
+            setDriverPhone('');
+            toast.success("Trip started successfully", { id: 'assign-task' });
         } catch (error) {
-            console.error('Failed to assign car:', error);
-            toast.error(error.message || "Failed to assign car", { id: 'assign-task' });
+            console.error('Failed to start trip:', error);
+            toast.error(error.message || "Failed to start trip", { id: 'assign-task' });
         }
     };
 
@@ -247,7 +287,8 @@ const EmployeeDashboard = () => {
         pendingVerifications: requests.filter(r => r.status === 'PENDING').length,
         pendingApprovals: requests.filter(r => r.status === 'VERIFIED').length,
         activeBookings: requests.filter(r => r.status === 'APPROVED' || r.status === 'ACTIVE').length,
-        availableCarsCount: availableCars.length
+        availableCarsCount: availableCars.length,
+        pendingCars: requests.filter(r => r.status === 'PENDING' || r.status === 'VERIFIED' || r.status === 'APPROVED').length
     };
 
 
@@ -311,6 +352,18 @@ const EmployeeDashboard = () => {
                         </p>
                     </CardContent>
                 </Card>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer border-border/60">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">Pending Cars</CardTitle>
+                        <ClipboardCheck className="h-4 w-4 text-orange-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.pendingCars}</div>
+                        <p className="text-xs text-muted-foreground mt-1 text-orange-600 dark:text-orange-400">
+                            Trips not started
+                        </p>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Requests Table - Using shadcn Card and ScrollArea */}
@@ -359,11 +412,20 @@ const EmployeeDashboard = () => {
                                         <div className="text-[10px] text-muted-foreground">{req.user?.email}</div>
                                     </TableCell>
                                     <TableCell className="text-sm">
-                                        {req.car?.make} {req.car?.model}
-                                        <div className="text-[10px] text-muted-foreground">Plate: {req.car?.plateNumber}</div>
+                                        {req.package ? (
+                                            <>
+                                                <span className="font-medium text-primary">{req.package.name}</span>
+                                                <div className="text-[10px] text-muted-foreground">{req.package.category} | {req.package.period}</div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {req.car?.make} {req.car?.model}
+                                                <div className="text-[10px] text-muted-foreground">Plate: {req.car?.plateNumber}</div>
+                                            </>
+                                        )}
                                     </TableCell>
                                     <TableCell className="text-muted-foreground text-[10px]">
-                                        {new Date(req.startDate).toLocaleDateString()} to {new Date(req.endDate).toLocaleDateString()}
+                                        {new Date(req.startDate).toLocaleString()} to {new Date(req.endDate).toLocaleString()}
                                     </TableCell>
                                     <TableCell>
                                         {getStatusBadge(req.status)}
@@ -546,11 +608,27 @@ const EmployeeDashboard = () => {
                                     <span className="text-muted-foreground">Customer:</span>
                                     <span className="font-medium">{selectedRequest?.user?.customerProfile ? `${selectedRequest.user.customerProfile.firstName} ${selectedRequest.user.customerProfile.lastName}` : 'N/A'}</span>
 
-                                    <span className="text-muted-foreground">Vehicle:</span>
-                                    <span className="font-medium">{selectedRequest?.car?.make} {selectedRequest?.car?.model}</span>
+                                    <span className="text-muted-foreground">Type:</span>
+                                    <span className="font-medium">{selectedRequest?.package ? 'Package Booking' : 'Car Rental'}</span>
 
-                                    <span className="text-muted-foreground">Period:</span>
-                                    <span className="font-medium">{selectedRequest ? `${new Date(selectedRequest.startDate).toLocaleDateString()} - ${new Date(selectedRequest.endDate).toLocaleDateString()}` : ''}</span>
+                                    {selectedRequest?.package ? (
+                                        <>
+                                            <span className="text-muted-foreground">Package:</span>
+                                            <span className="font-medium text-primary">{selectedRequest?.package?.name}</span>
+                                            <span className="text-muted-foreground">Category:</span>
+                                            <span className="font-medium">{selectedRequest?.package?.category}</span>
+                                            <span className="text-muted-foreground">Period:</span>
+                                            <span className="font-medium">{selectedRequest?.package?.period}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="text-muted-foreground">Vehicle:</span>
+                                            <span className="font-medium">{selectedRequest?.car?.make} {selectedRequest?.car?.model}</span>
+                                        </>
+                                    )}
+
+                                    <span className="text-muted-foreground">Rental Period:</span>
+                                    <span className="font-medium">{selectedRequest ? `${new Date(selectedRequest.startDate).toLocaleString()} - ${new Date(selectedRequest.endDate).toLocaleString()}` : ''}</span>
 
                                     <span className="text-muted-foreground">Amount:</span>
                                     <span className="font-bold text-primary">{Number(selectedRequest?.totalAmount).toLocaleString()} ETB</span>
@@ -659,33 +737,106 @@ const EmployeeDashboard = () => {
             <Dialog open={assignCarModalOpen} onOpenChange={setAssignCarModalOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Assign Car - #{selectedRequest?.id}</DialogTitle>
+                        <DialogTitle>Start Trip - #{selectedRequest?.id}</DialogTitle>
                         <DialogDescription>
-                            Select an available car to assign to {selectedRequest?.user?.customerProfile ? `${selectedRequest.user.customerProfile.firstName} ${selectedRequest.user.customerProfile.lastName}` : 'N/A'}
+                            Review and start the trip for {selectedRequest?.user?.customerProfile ? `${selectedRequest.user.customerProfile.firstName} ${selectedRequest.user.customerProfile.lastName}` : 'N/A'}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
+                        {/* Show package or car info */}
+                        {selectedRequest?.package ? (
+                            <div className="bg-primary/10 p-4 rounded-lg border border-primary/20">
+                                <h4 className="font-bold text-sm mb-2 text-primary">Package Booking</h4>
+                                <p className="text-lg font-semibold text-primary">
+                                    {selectedRequest?.package?.name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Category: {selectedRequest?.package?.category} | {selectedRequest?.package?.period}
+                                </p>
+                                {selectedRequest?.package?.features && selectedRequest.package.features.length > 0 && (
+                                    <div className="mt-2 pt-2 border-t border-primary/20">
+                                        <p className="text-xs font-medium text-muted-foreground mb-1">Package Includes:</p>
+                                        <ul className="text-xs text-muted-foreground">
+                                            {selectedRequest.package.features.slice(0, 3).map((f, i) => (
+                                                <li key={i} className="flex items-center gap-1">
+                                                    <span className="text-primary">•</span> {f}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="bg-muted/30 p-4 rounded-lg border">
+                                <h4 className="font-bold text-sm mb-2">Vehicle (Pre-selected by Customer)</h4>
+                                <p className="text-lg font-semibold">
+                                    {selectedRequest?.car?.make} {selectedRequest?.car?.model}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Plate: {selectedRequest?.car?.plateNumber}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Trip Details */}
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Select Vehicle</label>
-                            <Select value={selectedCar} onValueChange={setSelectedCar}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Choose a car..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableCars.map((car) => (
-                                        <SelectItem key={car.id} value={car.id.toString()}>
-                                            {car.make} {car.model}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Pickup:</span>
+                                <span className="font-medium">{selectedRequest?.pickupLocation || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Dropoff:</span>
+                                <span className="font-medium">{selectedRequest?.dropoffLocation || 'N/A'}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Start Date:</span>
+                                <span className="font-medium">{selectedRequest?.startDate ? format(new Date(selectedRequest.startDate), 'MMM dd, yyyy HH:mm') : 'N/A'}</span>
+                            </div>
                         </div>
+
+                        {/* Driver Details - Only show if pickup is outside office radius */}
+                        {selectedRequest?.isDelivery && (
+                            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                <h4 className="font-bold text-sm uppercase tracking-wider text-blue-700 mb-3">Driver Details</h4>
+                                <p className="text-xs text-blue-600 mb-3">Enter driver information for this delivery (pickup is outside office radius)</p>
+                                <div className="space-y-3">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-blue-800">Driver Name</label>
+                                        <Input
+                                            placeholder="Enter driver name..."
+                                            value={driverName}
+                                            onChange={(e) => setDriverName(e.target.value)}
+                                            className="border-blue-200 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-blue-800">Driver Phone</label>
+                                        <Input
+                                            placeholder="Enter driver phone number..."
+                                            value={driverPhone}
+                                            onChange={(e) => setDriverPhone(e.target.value)}
+                                            className="border-blue-200 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Show info if pickup is near office */}
+                        {!selectedRequest?.isDelivery && (
+                            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                                <h4 className="font-bold text-sm text-green-700 mb-2">Pickup Location</h4>
+                                <p className="text-sm text-green-600">
+                                    The customer will pick up the vehicle from the office. No driver needed.
+                                </p>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setAssignCarModalOpen(false)}>Cancel</Button>
-                        <Button onClick={confirmCarAssignment} disabled={!selectedCar}>
-                            <CheckCircle size={16} className="mr-2" />
-                            Assign Car
+                        <Button onClick={confirmCarAssignment}>
+                            <CarIcon size={16} className="mr-2" />
+                            Start Trip
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -715,13 +866,33 @@ const EmployeeDashboard = () => {
 
                                     <div className="bg-muted/30 p-4 rounded-lg border">
                                         <h4 className="font-bold text-xs uppercase tracking-widest text-muted-foreground mb-3 flex items-center gap-2">
-                                            <TrendingUp size={14} /> Vehicle Specs
+                                            <TrendingUp size={14} /> {selectedRequest?.package ? 'Package Info' : 'Vehicle Specs'}
                                         </h4>
-                                        <div className="space-y-2 text-sm">
-                                            <p className="font-bold text-lg">{selectedRequest?.car?.make} {selectedRequest?.car?.model}</p>
-                                            <p className="text-muted-foreground">Plate: {selectedRequest?.car?.plateNumber}</p>
-                                            <p className="text-muted-foreground">Category: {selectedRequest?.car?.category}</p>
-                                        </div>
+                                        {selectedRequest?.package ? (
+                                            <div className="space-y-2 text-sm">
+                                                <p className="font-bold text-lg text-primary">{selectedRequest?.package?.name}</p>
+                                                <p className="text-muted-foreground">Category: {selectedRequest?.package?.category}</p>
+                                                <p className="text-muted-foreground">Period: {selectedRequest?.package?.period}</p>
+                                                {selectedRequest?.package?.features && selectedRequest.package.features.length > 0 && (
+                                                    <div className="pt-2 mt-2 border-t border-gray-200">
+                                                        <p className="text-xs font-medium text-muted-foreground mb-1">Includes:</p>
+                                                        <ul className="text-xs text-muted-foreground space-y-1">
+                                                            {selectedRequest.package.features.slice(0, 4).map((f, i) => (
+                                                                <li key={i} className="flex items-center gap-1">
+                                                                    <CheckCircle2 size={10} className="text-green-500" /> {f}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2 text-sm">
+                                                <p className="font-bold text-lg">{selectedRequest?.car?.make} {selectedRequest?.car?.model}</p>
+                                                <p className="text-muted-foreground">Plate: {selectedRequest?.car?.plateNumber}</p>
+                                                <p className="text-muted-foreground">Category: {selectedRequest?.car?.category}</p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Pickup / Delivery Location Map */}
@@ -737,8 +908,7 @@ const EmployeeDashboard = () => {
                                                 <div className="h-[200px] w-full rounded-lg overflow-hidden border">
                                                     <MapSelector
                                                         isReadOnly={true}
-                                                        initialLocation={[9.0227, 38.7460]} // Fallback to office if not parseable
-                                                    // Note: In a real app we'd parse coordinates from the string or store them separately
+                                                        initialLocation={parseCoordinates(selectedRequest.pickupLocation) || [9.0227, 38.7460]}
                                                     />
                                                 </div>
                                             )}
@@ -753,8 +923,8 @@ const EmployeeDashboard = () => {
                                             <FileCheck size={14} /> Rental Period
                                         </h4>
                                         <div className="space-y-2 text-sm">
-                                            <p className="font-bold">From: {selectedRequest ? new Date(selectedRequest.startDate).toLocaleDateString() : ''}</p>
-                                            <p className="font-bold">To: {selectedRequest ? new Date(selectedRequest.endDate).toLocaleDateString() : ''}</p>
+                                            <p className="font-bold">From: {selectedRequest ? new Date(selectedRequest.startDate).toLocaleString() : ''}</p>
+                                            <p className="font-bold">To: {selectedRequest ? new Date(selectedRequest.endDate).toLocaleString() : ''}</p>
                                         </div>
                                     </div>
 

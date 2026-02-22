@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CreditCard, Wallet, Smartphone, ShieldCheck, Loader2, Navigation } from 'lucide-react';
+import { CreditCard, Wallet, Smartphone, ShieldCheck, Loader2, Navigation, Calendar } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { Button } from '@/components/ui/button';
 import { api } from '@/api';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +17,7 @@ const Payment = () => {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [car, setCar] = useState(null);
+    const [selectedPackage, setSelectedPackage] = useState(null);
     const [packages, setPackages] = useState([]);
 
     // Location State
@@ -30,26 +33,39 @@ const Payment = () => {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [accountNumber, setAccountNumber] = useState('');
     const [transactionNumber, setTransactionNumber] = useState('');
+    const [pickupTime, setPickupTime] = useState(null);
 
     const carId = searchParams.get('carId');
+    const packageId = searchParams.get('packageId');
 
     useEffect(() => {
         const fetchData = async () => {
             if (!isAuthenticated) {
-                navigate(`/login?carId=${carId}`);
+                navigate(`/login?carId=${carId || ''}&packageId=${packageId || ''}`);
                 return;
             }
-            if (!carId) {
+            if (!carId && !packageId) {
                 navigate('/');
                 return;
             }
             try {
-                const [carData, packagesData] = await Promise.all([
-                    api.get(`/cars/${carId}`),
-                    api.get('/packages')
-                ]);
-                setCar(carData);
+                let carData = null;
+                let packageData = null;
+                const packagesData = await api.get('/packages');
                 setPackages(packagesData);
+
+                if (carId) {
+                    carData = await api.get(`/cars/${carId}`);
+                    setCar(carData);
+                }
+
+                if (packageId) {
+                    // Find the package from the list
+                    packageData = packagesData.find(p => p.id === parseInt(packageId));
+                    if (packageData) {
+                        setSelectedPackage(packageData);
+                    }
+                }
             } catch (error) {
                 console.error('Failed to fetch payment data:', error);
             } finally {
@@ -57,7 +73,7 @@ const Payment = () => {
             }
         };
         fetchData();
-    }, [carId, navigate]);
+    }, [carId, packageId, navigate]);
 
     // Calculate totals from session storage dates
     const sDateStr = sessionStorage.getItem('startDate');
@@ -72,10 +88,18 @@ const Payment = () => {
     }
 
     const insuranceFee = 1000;
-    const rentalFee = car ? car.dailyRate * durationDays : 0;
-    const total = rentalFee + insuranceFee;
+    const rentalFee = car ? Number(car.dailyRate) * durationDays : 0;
+    // For packages, use the package price directly (already includes everything)
+    const packageTotal = selectedPackage ? Number(selectedPackage.price) : 0;
+    const total = selectedPackage ? packageTotal : rentalFee + insuranceFee;
 
     const handlePayment = async () => {
+        // Validation - Pickup time is required
+        if (!pickupTime) {
+            toast.error('Please select your pickup time');
+            return;
+        }
+
         // Validation
         if (paymentMethod === 'TELEBIRR') {
             if (!phoneNumber || !transactionNumber) {
@@ -91,15 +115,21 @@ const Payment = () => {
 
         setLoading(true);
         try {
+            // Combine startDate with pickupTime
+            let finalStartDate = sDateStr ? new Date(sDateStr) : new Date();
+            finalStartDate.setHours(pickupTime.getHours(), pickupTime.getMinutes(), 0, 0);
+
             const payload = {
-                carId: parseInt(carId),
-                packageId: packages[0]?.id || 1, // Fallback to first package for demo
-                startDate: sDateStr ? new Date(sDateStr).toISOString() : new Date().toISOString(),
+                carId: carId ? parseInt(carId) : null,
+                packageId: packageId ? parseInt(packageId) : null,
+                startDate: finalStartDate.toISOString(),
                 endDate: eDateStr ? new Date(eDateStr).toISOString() : new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000).toISOString(),
                 totalAmount: total,
                 idCardUrl: sessionStorage.getItem('idCardUrl') || user?.profile?.idCardUrl,
                 driverLicenseUrl: sessionStorage.getItem('licenseUrl') || user?.profile?.driverLicenseUrl,
-                pickupLocation: locationData.address || `Lat: ${locationData.lat}, Lng: ${locationData.lng}`,
+                pickupLocation: locationData.address
+                    ? `${locationData.address} (Lat: ${locationData.lat}, Lng: ${locationData.lng})`
+                    : `Lat: ${locationData.lat}, Lng: ${locationData.lng}`,
                 isDelivery: locationData.isDelivery,
                 paymentDetails: {
                     method: paymentMethod,
@@ -145,25 +175,50 @@ const Payment = () => {
                                 </h3>
                             </div>
                             <div className="p-6 space-y-5">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-500 font-medium">Vehicle</span>
-                                    <span className="font-bold text-gray-900">{car?.make} {car?.model}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-500 font-medium">Duration</span>
-                                    <span className="font-bold text-gray-900">{durationDays} Days</span>
-                                </div>
+                                {selectedPackage ? (
+                                    <>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-medium">Package</span>
+                                            <span className="font-bold text-gray-900">{selectedPackage.name}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-medium">Category</span>
+                                            <span className="font-bold text-gray-900">{selectedPackage.category}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-medium">Duration</span>
+                                            <span className="font-bold text-gray-900">{durationDays} Days</span>
+                                        </div>
+                                        <div className="border-t border-dashed border-gray-200 pt-4">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-600">{selectedPackage.period}</span>
+                                                <span className="font-medium">{Number(selectedPackage.price).toLocaleString()} ETB</span>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-medium">Vehicle</span>
+                                            <span className="font-bold text-gray-900">{car?.make} {car?.model}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-gray-500 font-medium">Duration</span>
+                                            <span className="font-bold text-gray-900">{durationDays} Days</span>
+                                        </div>
 
-                                <div className="border-t border-dashed border-gray-200 pt-4 space-y-3">
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Rental Fee ({car?.dailyRate} x {durationDays})</span>
-                                        <span className="font-medium">{Number(rentalFee).toLocaleString()} ETB</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-gray-600">Insurance (Refundable)</span>
-                                        <span className="font-medium">{insuranceFee.toLocaleString()} ETB</span>
-                                    </div>
-                                </div>
+                                        <div className="border-t border-dashed border-gray-200 pt-4 space-y-3">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-600">Rental Fee ({car?.dailyRate} x {durationDays})</span>
+                                                <span className="font-medium">{Number(rentalFee).toLocaleString()} ETB</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-gray-600">Insurance (Refundable)</span>
+                                                <span className="font-medium">{insuranceFee.toLocaleString()} ETB</span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
 
                                 <div className="border-t border-gray-100 pt-4 flex justify-between items-end">
                                     <span className="text-lg font-bold text-gray-900">Total</span>
@@ -177,6 +232,33 @@ const Payment = () => {
                     </div>
 
                     <div className="lg:col-span-2 space-y-6">
+                        {/* Pickup Time Selection - Required */}
+                        <div className="bg-white shadow-lg rounded-2xl border border-gray-100 p-8">
+                            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                <Calendar size={22} className="text-primary" />
+                                Pickup Time *
+                            </h3>
+                            <div className="max-w-md">
+                                <label className="block text-sm font-bold text-gray-900 mb-2">Select Time *</label>
+                                <div className="relative">
+                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={18} />
+                                    <DatePicker
+                                        selected={pickupTime}
+                                        onChange={(date) => setPickupTime(date)}
+                                        showTimeSelect
+                                        timeFormat="h:mm aa"
+                                        timeIntervals={30}
+                                        dateFormat="MMM dd, yyyy h:mm aa"
+                                        placeholderText="Select pickup time (e.g., 12:00 PM)"
+                                        minDate={new Date()}
+                                        required
+                                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:ring-4 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium text-gray-900"
+                                    />
+                                </div>
+                                <p className="mt-2 text-xs text-gray-500">Please select the time you want to pick up the car</p>
+                            </div>
+                        </div>
+
                         {/* Map Integration */}
                         <div className="bg-white shadow-lg rounded-2xl border border-gray-100 p-8">
                             <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">

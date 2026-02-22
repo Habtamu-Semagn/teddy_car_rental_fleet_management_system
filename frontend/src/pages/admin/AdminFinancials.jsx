@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import {
     DollarSign, TrendingUp, TrendingDown,
     Calendar, Download, ArrowUpRight, ArrowDownRight,
-    PieChart, BarChart3, Wallet, Loader2
+    Wallet, Loader2
 } from 'lucide-react';
 
 // Shadcn Components
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
     Table,
@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/table";
 import AdminLayout from "@/components/admin-layout";
 import { api } from "@/api";
+import { toast } from 'sonner';
 
 const AdminFinancials = () => {
     const [transactions, setTransactions] = useState([]);
+    const [allTransactions, setAllTransactions] = useState([]);
     const [stats, setStats] = useState({
         totalRevenue: 0,
         totalExpenses: 0,
@@ -29,6 +31,7 @@ const AdminFinancials = () => {
         profitMargin: 0
     });
     const [loading, setLoading] = useState(true);
+    const [currentMonthOnly, setCurrentMonthOnly] = useState(false);
 
     useEffect(() => {
         const fetchFinancialData = async () => {
@@ -38,6 +41,7 @@ const AdminFinancials = () => {
                     api.get('/reports/transactions')
                 ]);
                 setStats(overview.summary);
+                setAllTransactions(txs);
                 setTransactions(txs);
             } catch (error) {
                 console.error('Failed to fetch financial data:', error);
@@ -48,6 +52,38 @@ const AdminFinancials = () => {
         fetchFinancialData();
     }, []);
 
+    const handleCurrentMonthFilter = () => {
+        const now = new Date();
+        if (currentMonthOnly) {
+            setTransactions(allTransactions);
+            setCurrentMonthOnly(false);
+        } else {
+            const filtered = allTransactions.filter(tx => {
+                const d = new Date(tx.date);
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            });
+            setTransactions(filtered);
+            setCurrentMonthOnly(true);
+        }
+    };
+
+    const handleExportCSV = () => {
+        if (transactions.length === 0) { toast.error('No transaction data to export.'); return; }
+        const headers = ['ID', 'Customer', 'Type', 'Date', 'Method', 'Amount', 'Status'];
+        const rows = transactions.map(tx => [
+            tx.id, tx.customer, tx.type,
+            tx.date ? new Date(tx.date).toLocaleDateString() : '',
+            tx.method, tx.amount, tx.status
+        ].map(v => `"${v}"`).join(','));
+        const csv = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url;
+        a.download = `transactions_${currentMonthOnly ? 'current_month' : 'all'}.csv`;
+        a.click(); URL.revokeObjectURL(url);
+        toast.success('Transactions exported!');
+    };
+
 
     return (
         <AdminLayout>
@@ -57,13 +93,13 @@ const AdminFinancials = () => {
                     <p className="text-muted-foreground mt-1">Track revenue, expenses, and financial performance.</p>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline" className="gap-2">
+                    <Button variant="outline" className="gap-2" onClick={handleCurrentMonthFilter}>
                         <Calendar size={16} />
-                        Current Month
+                        {currentMonthOnly ? 'Show All' : 'Current Month'}
                     </Button>
-                    <Button className="gap-2 shadow-lg hover:shadow-primary/25">
+                    <Button className="gap-2 shadow-lg hover:shadow-primary/25" onClick={handleExportCSV}>
                         <Download size={16} />
-                        Export Data
+                        Export CSV
                     </Button>
                 </div>
             </div>
@@ -128,12 +164,7 @@ const AdminFinancials = () => {
                     </div>
                     <div className="flex gap-2 items-center">
                         {loading && <Loader2 className="animate-spin text-primary" size={20} />}
-                        <Button variant="ghost" size="sm" className="gap-2">
-                            <PieChart size={14} /> Charts
-                        </Button>
-                        <Button variant="ghost" size="sm" className="gap-2">
-                            <BarChart3 size={14} /> Summary
-                        </Button>
+                        {currentMonthOnly && <Badge variant="secondary">Current Month Only</Badge>}
                     </div>
                 </div>
                 <Table>

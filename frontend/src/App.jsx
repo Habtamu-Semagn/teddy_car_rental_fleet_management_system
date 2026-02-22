@@ -31,6 +31,13 @@ import EmployeeReports from './pages/employee/EmployeeReports';
 
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import NotFound from './pages/NotFound';
+import About from './pages/About';
+import Contact from './pages/Contact';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Packages from './pages/Packages';
+import Fleet from './pages/Fleet';
 
 function App() {
   return (
@@ -41,8 +48,14 @@ function App() {
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
+              <Route path="/packages" element={<Packages />} />
+              <Route path="/fleet" element={<Fleet />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
 
               <Route path="/upload-docs" element={
                 <ProtectedRoute roles={['CUSTOMER']}><UploadDocs /></ProtectedRoute>
@@ -94,6 +107,9 @@ function App() {
             <Route path="/employee/reports" element={
               <ProtectedRoute roles={['EMPLOYEE', 'ADMIN']}><EmployeeReports /></ProtectedRoute>
             } />
+
+            {/* 404 Catch-All */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>

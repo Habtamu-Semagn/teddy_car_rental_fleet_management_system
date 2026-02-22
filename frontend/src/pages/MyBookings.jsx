@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '@/api';
 import {
     Car,
+    Package,
     Calendar,
     Clock,
     CheckCircle2,
@@ -210,7 +211,12 @@ const MyBookings = () => {
                                 <div className="p-5 sm:p-7 flex flex-col lg:flex-row lg:items-center gap-8">
                                     {/* Car Image/Icon */}
                                     <div className="relative w-full lg:w-48 h-32 rounded-2xl bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
-                                        {booking.car?.imageUrl ? (
+                                        {booking.package ? (
+                                            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex flex-col items-center justify-center p-4">
+                                                <Package size={32} className="text-primary mb-2" />
+                                                <span className="text-xs font-bold text-primary text-center">{booking.package.name}</span>
+                                            </div>
+                                        ) : booking.car?.imageUrl ? (
                                             <img
                                                 src={api.getImageUrl(booking.car.imageUrl)}
                                                 alt={booking.car.model}
@@ -237,8 +243,17 @@ const MyBookings = () => {
                                         <div>
                                             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Vehicle</p>
                                             <h4 className="text-base font-bold text-gray-900 truncate">
-                                                {booking.car?.make} {booking.car?.model}
-                                                <span className="block text-xs font-medium text-gray-400 mt-0.5">{booking.car?.plateNumber}</span>
+                                                {booking.package ? (
+                                                    <>
+                                                        <span className="text-primary">{booking.package.name}</span>
+                                                        <span className="block text-xs font-medium text-gray-400 mt-0.5">{booking.package.category} Package</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {booking.car?.make} {booking.car?.model}
+                                                        <span className="block text-xs font-medium text-gray-400 mt-0.5">{booking.car?.plateNumber}</span>
+                                                    </>
+                                                )}
                                             </h4>
                                         </div>
 
@@ -302,22 +317,47 @@ const MyBookings = () => {
                                     {/* Vehicle Card */}
                                     <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
-                                            <Car size={14} className="text-primary" /> Vehicle Information
+                                            <Car size={14} className="text-primary" /> {selectedBooking?.package ? 'Package Information' : 'Vehicle Information'}
                                         </h4>
-                                        <div className="flex gap-4">
-                                            <div className="w-20 h-20 rounded-xl bg-white flex items-center justify-center overflow-hidden border border-gray-100 shrink-0">
-                                                {selectedBooking?.car?.imageUrl && (
-                                                    <img src={api.getImageUrl(selectedBooking.car.imageUrl)} alt="Car" className="w-full h-full object-cover" />
+                                        {selectedBooking?.package ? (
+                                            <div className="space-y-3">
+                                                <div>
+                                                    <p className="font-bold text-gray-900 text-lg">{selectedBooking.package.name}</p>
+                                                    <p className="text-sm text-gray-500 mt-0.5">{selectedBooking.package.category}</p>
+                                                    <p className="text-xs font-bold text-primary bg-primary/5 inline-block px-2 py-0.5 rounded mt-2 uppercase tracking-tighter">
+                                                        {selectedBooking.package.period}
+                                                    </p>
+                                                </div>
+                                                {selectedBooking.package.features && selectedBooking.package.features.length > 0 && (
+                                                    <div className="pt-2 border-t border-gray-200">
+                                                        <p className="text-xs font-medium text-gray-500 mb-2">Package Includes:</p>
+                                                        <ul className="space-y-1">
+                                                            {selectedBooking.package.features.slice(0, 3).map((feature, idx) => (
+                                                                <li key={idx} className="text-xs text-gray-600 flex items-center gap-1">
+                                                                    <CheckCircle2 size={10} className="text-green-500" />
+                                                                    {feature}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <div>
-                                                <p className="font-bold text-gray-900">{selectedBooking?.car?.make} {selectedBooking?.car?.model}</p>
-                                                <p className="text-sm text-gray-500 mt-0.5">Plate: {selectedBooking?.car?.plateNumber}</p>
-                                                <p className="text-xs font-bold text-primary bg-primary/5 inline-block px-2 py-0.5 rounded mt-2 uppercase tracking-tighter">
-                                                    {selectedBooking?.car?.category}
-                                                </p>
+                                        ) : (
+                                            <div className="flex gap-4">
+                                                <div className="w-20 h-20 rounded-xl bg-white flex items-center justify-center overflow-hidden border border-gray-100 shrink-0">
+                                                    {selectedBooking?.car?.imageUrl && (
+                                                        <img src={api.getImageUrl(selectedBooking.car.imageUrl)} alt="Car" className="w-full h-full object-cover" />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="font-bold text-gray-900">{selectedBooking?.car?.make} {selectedBooking?.car?.model}</p>
+                                                    <p className="text-sm text-gray-500 mt-0.5">Plate: {selectedBooking?.car?.plateNumber}</p>
+                                                    <p className="text-xs font-bold text-primary bg-primary/5 inline-block px-2 py-0.5 rounded mt-2 uppercase tracking-tighter">
+                                                        {selectedBooking?.car?.category}
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
 
                                     {/* Location Info */}

@@ -9,6 +9,7 @@ router.get('/:id', carController.getCarById);
 
 // Staff/Admin routes
 router.post('/', authenticate, authorize('EMPLOYEE', 'ADMIN'), carController.createCar);
+router.put('/:id', authenticate, authorize('EMPLOYEE', 'ADMIN'), carController.updateCar);
 router.patch('/:id', authenticate, authorize('EMPLOYEE', 'ADMIN'), carController.updateCar);
 router.delete('/:id', authenticate, authorize('ADMIN'), carController.deleteCar);
 

@@ -13,17 +13,20 @@ const UploadDocs = () => {
     const [loading, setLoading] = useState(false);
     const [files, setFiles] = useState({ idCard: null, license: null });
     const carId = searchParams.get('carId');
+    const packageId = searchParams.get('packageId');
 
     // Skip if already uploaded
     useEffect(() => {
         if (!authLoading && isAuthenticated && user?.profile?.idCardUrl && user?.profile?.driverLicenseUrl) {
             if (carId) {
                 navigate(`/agreement?carId=${carId}`);
+            } else if (packageId) {
+                navigate(`/agreement?packageId=${packageId}`);
             } else {
                 navigate('/agreement');
             }
         }
-    }, [authLoading, isAuthenticated, user, carId, navigate]);
+    }, [authLoading, isAuthenticated, user, carId, packageId, navigate]);
 
     const handleFileChange = (e, type) => {
         const file = e.target.files[0];
@@ -70,6 +73,8 @@ const UploadDocs = () => {
 
             if (carId) {
                 navigate(`/agreement?carId=${carId}`);
+            } else if (packageId) {
+                navigate(`/agreement?packageId=${packageId}`);
             } else {
                 navigate('/agreement');
             }

@@ -6,6 +6,21 @@ const register = async (req, res) => {
     try {
         const { email, password, role, firstName, lastName, phoneNumber, address } = req.body;
 
+        // Input validation
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Invalid email format' });
+        }
+        if (password.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters' });
+        }
+        if (role && !['CUSTOMER', 'EMPLOYEE', 'ADMIN'].includes(role)) {
+            return res.status(400).json({ message: 'Invalid role' });
+        }
+
         const existingUser = await prisma.user.findUnique({ where: { email } });
         if (existingUser) {
             return res.status(400).json({ message: 'User already exists' });
@@ -18,14 +33,15 @@ const register = async (req, res) => {
                 email,
                 password: hashedPassword,
                 role: role || 'CUSTOMER',
-                customerProfile: role === 'CUSTOMER' || !role ? {
+                // Create a profile for customers AND employees to store their name
+                customerProfile: {
                     create: {
-                        firstName,
-                        lastName,
-                        phoneNumber,
-                        address
+                        firstName: firstName || '',
+                        lastName: lastName || '',
+                        phoneNumber: phoneNumber || '',
+                        address: address || ''
                     }
-                } : undefined
+                }
             },
             include: {
                 customerProfile: true
@@ -53,6 +69,10 @@ const register = async (req, res) => {
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
+        }
 
         const user = await prisma.user.findUnique({
             where: { email },
@@ -123,11 +143,6 @@ const updateProfile = async (req, res) => {
         const userId = req.user.id;
 
         console.log(`Updating profile for user ${userId}:`, req.body);
-
-        // Ensure only customers have profiles
-        if (req.user.role !== 'CUSTOMER') {
-            return res.status(400).json({ message: 'Only customers have profiles' });
-        }
 
         const updatedProfile = await prisma.customerProfile.upsert({
             where: { userId },

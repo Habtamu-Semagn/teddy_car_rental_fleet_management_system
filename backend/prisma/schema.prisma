@@ -54,7 +54,8 @@ model Car {
 model Booking {
   id               Int              @id @default(autoincrement())
   userId           Int
-  carId            Int
+  carId            Int?
+  packageId        Int?
   startDate        DateTime
   endDate          DateTime
   totalAmount      Decimal
@@ -63,12 +64,14 @@ model Booking {
   driverLicenseUrl String?
   processedById    Int?
   assignedDriver   String?
+  driverPhone      String?
   pickupLocation   String?
   returnLocation   String?
   isDelivery       Boolean          @default(false)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
-  car              Car              @relation(fields: [carId], references: [id])
+  car              Car?             @relation(fields: [carId], references: [id])
+  package          Package?         @relation(fields: [packageId], references: [id])
   processedBy      User?            @relation("EmployeeBookings", fields: [processedById], references: [id])
   user             User             @relation(fields: [userId], references: [id])
   payment          Payment?
@@ -126,6 +129,7 @@ model Package {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  bookings  Booking[]
 }
 
 enum Role {

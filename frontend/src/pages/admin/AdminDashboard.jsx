@@ -3,6 +3,7 @@ import {
     Users, Car, FileText, Check, X, Eye,
     TrendingUp, DollarSign, Calendar, Loader2
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Shadcn Components
 import { Button } from "@/components/ui/button";
@@ -16,17 +17,26 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 import AdminLayout from "@/components/admin-layout";
 import { api } from "@/api";
+import { toast } from 'sonner';
 
 const AdminDashboard = () => {
+    const navigate = useNavigate();
     const [requests, setRequests] = useState([]);
     const [stats, setStats] = useState({
         summary: { totalRevenue: 0, netProfit: 0 },
         stats: { pendingBookings: 0, activeRentals: 0, totalCustomers: 0 }
     });
     const [loading, setLoading] = useState(true);
+    const [viewDocsBooking, setViewDocsBooking] = useState(null);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -62,8 +72,8 @@ const AdminDashboard = () => {
 
     const handleAction = async (id, status) => {
         try {
-            await api.patch(`/bookings/${id}`, { status });
-            // Refresh data
+            await api.patch(`/bookings/${id}/status`, { status });
+            toast.success(`Booking ${status.toLowerCase()} successfully!`);
             const [financials, bookings] = await Promise.all([
                 api.get('/reports/financials'),
                 api.get('/bookings')
@@ -71,7 +81,7 @@ const AdminDashboard = () => {
             setStats(financials);
             setRequests(bookings.slice(0, 5));
         } catch (error) {
-            alert(error.message || `Failed to ${status.toLowerCase()} booking`);
+            toast.error(error.message || `Failed to ${status.toLowerCase()} booking`);
         }
     };
 
@@ -84,11 +94,7 @@ const AdminDashboard = () => {
                     <p className="text-muted-foreground mt-1">Welcome back! Here's what's happening today.</p>
                 </div>
                 <div className="flex gap-3">
-                    <Button variant="outline" className="gap-2">
-                        <Calendar size={16} />
-                        Select Date Range
-                    </Button>
-                    <Button className="gap-2 shadow-lg hover:shadow-primary/25">
+                    <Button variant="outline" className="gap-2" onClick={() => navigate('/admin/financials')}>
                         <FileText size={16} />
                         Generate Report
                     </Button>
@@ -155,7 +161,7 @@ const AdminDashboard = () => {
                         <p className="text-sm text-muted-foreground">Manage and verify new booking submissions.</p>
                     </div>
                     {loading && <Loader2 className="animate-spin text-primary" size={20} />}
-                    <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/5">View All</Button>
+                    <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/5" onClick={() => navigate('/admin/bookings')}>View All</Button>
                 </div>
                 <Table>
                     <TableHeader className="bg-muted/40">
@@ -198,7 +204,7 @@ const AdminDashboard = () => {
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end gap-1">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="View Docs">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50" title="View Docs" onClick={() => setViewDocsBooking(req)}>
                                             <Eye size={16} />
                                         </Button>
                                         {(req.status === 'PENDING' || req.status === 'VERIFIED') && (
@@ -231,6 +237,44 @@ const AdminDashboard = () => {
                 </Table>
             </Card>
 
+            {/* View Docs Modal */}
+            <Dialog open={!!viewDocsBooking} onOpenChange={() => setViewDocsBooking(null)}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Customer Documents — {viewDocsBooking?.user?.customerProfile?.firstName} {viewDocsBooking?.user?.customerProfile?.lastName}</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <p className="text-sm font-semibold mb-2 text-muted-foreground">National ID Card</p>
+                            {viewDocsBooking?.user?.customerProfile?.idCardUrl ? (
+                                <a href={api.getImageUrl(viewDocsBooking.user.customerProfile.idCardUrl)} target="_blank" rel="noreferrer">
+                                    <img
+                                        src={api.getImageUrl(viewDocsBooking.user.customerProfile.idCardUrl)}
+                                        alt="ID Card"
+                                        className="w-full rounded-lg border object-cover max-h-56"
+                                    />
+                                </a>
+                            ) : (
+                                <div className="flex items-center justify-center h-36 bg-muted rounded-lg text-muted-foreground text-sm">Not uploaded</div>
+                            )}
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold mb-2 text-muted-foreground">Driver's License</p>
+                            {viewDocsBooking?.user?.customerProfile?.driverLicenseUrl ? (
+                                <a href={api.getImageUrl(viewDocsBooking.user.customerProfile.driverLicenseUrl)} target="_blank" rel="noreferrer">
+                                    <img
+                                        src={api.getImageUrl(viewDocsBooking.user.customerProfile.driverLicenseUrl)}
+                                        alt="Driver License"
+                                        className="w-full rounded-lg border object-cover max-h-56"
+                                    />
+                                </a>
+                            ) : (
+                                <div className="flex items-center justify-center h-36 bg-muted rounded-lg text-muted-foreground text-sm">Not uploaded</div>
+                            )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </AdminLayout>
     );
 };

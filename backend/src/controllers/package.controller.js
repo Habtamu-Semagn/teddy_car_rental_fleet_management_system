@@ -38,9 +38,16 @@ const createPackage = async (req, res) => {
 const updatePackage = async (req, res) => {
     try {
         const { id } = req.params;
-        const data = req.body;
+        const { name, price, period, features, category, isActive } = req.body;
 
-        if (data.price) data.price = parseFloat(data.price);
+        // Build update data with only allowed fields
+        const data = {};
+        if (name !== undefined) data.name = name;
+        if (price !== undefined) data.price = parseFloat(price);
+        if (period !== undefined) data.period = period;
+        if (features !== undefined) data.features = features;
+        if (category !== undefined) data.category = category;
+        if (isActive !== undefined) data.isActive = isActive;
 
         const pkg = await prisma.package.update({
             where: { id: parseInt(id) },

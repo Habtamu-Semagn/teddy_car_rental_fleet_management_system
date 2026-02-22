@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const helmet = require('helmet');
+const morgan = require('morgan');
 require('dotenv').config();
 
 // Route Imports
@@ -20,7 +22,12 @@ const errorMiddleware = require('./src/middlewares/error.middleware');
 
 console.log('Initializing Teddy Car Rental API...');
 
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true
+}));
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(morgan('dev'));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 

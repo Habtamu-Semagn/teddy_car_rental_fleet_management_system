@@ -129,23 +129,30 @@ async function main() {
 
     console.log('Cars created: basic and additional 10 cars added.');
 
-    // Create a booking with new fields
-    const booking = await prisma.booking.create({
-        data: {
-            userId: customer.id,
-            carId: car1.id,
-            startDate: new Date(),
-            endDate: new Date(new Date().setDate(new Date().getDate() + 3)),
-            totalAmount: 4500,
-            status: 'PENDING',
-            pickupLocation: 'Bole Airport',
-            returnLocation: 'Bole Airport',
-            isDelivery: true,
-            idCardUrl: 'http://example.com/id.jpg',
-            driverLicenseUrl: 'http://example.com/license.jpg'
-        }
+    // Create a sample booking (only if none exist for this customer+car combo)
+    const existingBooking = await prisma.booking.findFirst({
+        where: { userId: customer.id, carId: car1.id }
     });
-    console.log('Booking created:', booking.id);
+    if (!existingBooking) {
+        const booking = await prisma.booking.create({
+            data: {
+                userId: customer.id,
+                carId: car1.id,
+                startDate: new Date(),
+                endDate: new Date(new Date().setDate(new Date().getDate() + 3)),
+                totalAmount: 4500,
+                status: 'PENDING',
+                pickupLocation: 'Bole Airport',
+                returnLocation: 'Bole Airport',
+                isDelivery: true,
+                idCardUrl: 'http://example.com/id.jpg',
+                driverLicenseUrl: 'http://example.com/license.jpg'
+            }
+        });
+        console.log('Booking created:', booking.id);
+    } else {
+        console.log('Sample booking already exists, skipping.');
+    }
 }
 
 main()

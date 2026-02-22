@@ -65,6 +65,7 @@ const Home = () => {
                 setLoading(false);
             }
         };
+
         fetchCars();
     }, [startDate, endDate]);
 
@@ -101,6 +102,12 @@ const Home = () => {
                             <a href="#fleet" className="bg-primary text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-primary transition-all hover:scale-105 inline-block shadow-lg hover:shadow-primary/50">
                                 Browse Fleet
                             </a>
+                            <button
+                                onClick={() => navigate('/packages')}
+                                className="ml-4 bg-white/10 backdrop-blur-sm text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-gray-900 transition-all hover:scale-105 inline-block shadow-lg border border-white/30"
+                            >
+                                View Packages
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -258,6 +265,16 @@ const Home = () => {
                         </button>
                     </div>
                 )}
+
+                {/* View All Cars CTA */}
+                <div className="text-center mt-12">
+                    <button
+                        onClick={() => navigate('/packages')}
+                        className="bg-primary text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-900 hover:text-white transition-all hover:scale-105 inline-block shadow-lg hover:shadow-primary/50"
+                    >
+                        View Rental Packages
+                    </button>
+                </div>
             </section>
         </div>
     );

@@ -1,13 +1,19 @@
 const jwt = require('jsonwebtoken');
 
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is not set. Please add it to your .env file.');
+    process.exit(1);
+}
+
 const generateToken = (userId, role) => {
-    return jwt.sign({ userId, role }, process.env.JWT_SECRET || 'your_super_secret_key', {
+    return jwt.sign({ userId, role }, JWT_SECRET, {
         expiresIn: '1d',
     });
 };
 
 const verifyToken = (token) => {
-    return jwt.verify(token, process.env.JWT_SECRET || 'your_super_secret_key');
+    return jwt.verify(token, JWT_SECRET);
 };
 
 module.exports = {

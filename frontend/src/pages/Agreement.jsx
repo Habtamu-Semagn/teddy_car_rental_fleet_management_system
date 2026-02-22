@@ -14,17 +14,20 @@ const Agreement = () => {
     const [signature, setSignature] = useState('');
     const [agreed, setAgreed] = useState(false);
     const carId = searchParams.get('carId');
+    const packageId = searchParams.get('packageId');
 
     // Skip if already signed
     useEffect(() => {
         if (!authLoading && isAuthenticated && user?.profile?.agreementSigned) {
             if (carId) {
                 navigate(`/payment?carId=${carId}`);
+            } else if (packageId) {
+                navigate(`/payment?packageId=${packageId}`);
             } else {
                 navigate('/');
             }
         }
-    }, [authLoading, isAuthenticated, user, carId, navigate]);
+    }, [authLoading, isAuthenticated, user, carId, packageId, navigate]);
 
     // Unified Agreement: No longer blocks without carId.
     // This allows setup during registration.
@@ -49,6 +52,8 @@ const Agreement = () => {
 
             if (carId) {
                 navigate(`/payment?carId=${carId}`);
+            } else if (packageId) {
+                navigate(`/payment?packageId=${packageId}`);
             } else {
                 toast.success('Onboarding complete! You can now book your first car.');
                 navigate('/');

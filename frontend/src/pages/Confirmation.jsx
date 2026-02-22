@@ -53,8 +53,10 @@ const Confirmation = () => {
                 startY: 65,
                 head: [['Description', 'Details']],
                 body: [
-                    ['Vehicle', `${booking?.car?.make || 'N/A'} ${booking?.car?.model || ''}`],
-                    ['Registration', booking?.car?.licensePlate || 'N/A'],
+                    ['Type', booking?.package ? 'Package Booking' : 'Car Rental'],
+                    ['Package', booking?.package?.name || 'N/A'],
+                    ['Vehicle', booking?.car ? `${booking?.car?.make} ${booking?.car?.model}` : 'N/A'],
+                    ['Registration', booking?.car?.plateNumber || 'N/A'],
                     ['Rental Period', `${booking?.startDate ? new Date(booking.startDate).toLocaleDateString() : 'N/A'} - ${booking?.endDate ? new Date(booking.endDate).toLocaleDateString() : 'N/A'}`],
                     ['Total Amount', `${booking?.totalAmount?.toLocaleString() || '0'} ETB`],
                     ['Status', 'PAID']
@@ -110,7 +112,9 @@ const Confirmation = () => {
                 body: [
                     ['Name', customerName],
                     ['Booking ID', `#BK-${booking?.id?.toString().padStart(5, '0') || 'N/A'}`],
-                    ['Vehicle', `${booking?.car?.make || 'N/A'} ${booking?.car?.model || ''}`]
+                    ['Type', booking?.package ? 'Package Booking' : 'Car Rental'],
+                    ['Package', booking?.package?.name || 'N/A'],
+                    ['Vehicle', booking?.car ? `${booking?.car?.make} ${booking?.car?.model}` : 'N/A']
                 ],
                 theme: 'grid'
             });
@@ -155,10 +159,27 @@ const Confirmation = () => {
                             #BK-{booking?.id?.toString().padStart(5, '0') || 'N/A'}
                         </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-gray-500 font-medium">Vehicle</span>
-                        <span className="font-semibold text-gray-900">{booking?.car ? `${booking.car.make} ${booking.car.model}` : 'N/A'}</span>
-                    </div>
+                    {booking?.package ? (
+                        <>
+                            <div className="flex justify-between items-center">
+                                <span className="text-gray-500 font-medium">Package</span>
+                                <span className="font-semibold text-gray-900">{booking.package.name}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-gray-500 font-medium">Category</span>
+                                <span className="font-semibold text-gray-900">{booking.package.category}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <span className="text-gray-500 font-medium">Duration</span>
+                                <span className="font-semibold">{booking.package.period}</span>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex justify-between items-center">
+                            <span className="text-gray-500 font-medium">Vehicle</span>
+                            <span className="font-semibold text-gray-900">{booking?.car ? `${booking.car.make} ${booking.car.model}` : 'N/A'}</span>
+                        </div>
+                    )}
                     <div className="flex justify-between items-center">
                         <span className="text-gray-500 font-medium">Pickup Date</span>
                         <span className="font-semibold">{booking?.startDate ? new Date(booking.startDate).toLocaleDateString() : 'N/A'}</span>

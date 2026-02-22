@@ -33,7 +33,13 @@ const MapSelector = ({ onLocationChange, initialLocation = null, isReadOnly = fa
 
     // Initial Geolocation - Run only on mount or if initialLocation changes from NULL to VALUE
     useEffect(() => {
-        if (initializationRef.current) return;
+        if (initializationRef.current) {
+            // If already initialized and we have a new initialLocation, update the position
+            if (initialLocation && initialLocation !== position) {
+                handleLocationUpdate(initialLocation);
+            }
+            return;
+        }
 
         if (!initialLocation && !isReadOnly && navigator.geolocation) {
             setIsLocating(true);
@@ -57,7 +63,7 @@ const MapSelector = ({ onLocationChange, initialLocation = null, isReadOnly = fa
             setIsLocating(false);
             initializationRef.current = true;
         }
-    }, [isReadOnly]); // Only run once on mount for initialization
+    }, [isReadOnly, initialLocation]); // Only run once on mount for initialization
 
     // Calculate distance from office
     const calculateDistance = (pos1, pos2) => {

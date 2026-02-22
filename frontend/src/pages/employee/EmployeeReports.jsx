@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 import {
     FileText, Download, Calendar, TrendingUp, Users, Car as CarIcon, DollarSign, CheckCircle, Loader2
 } from 'lucide-react';
@@ -21,35 +23,43 @@ import {
 } from "@/components/ui/table";
 import EmployeeLayout from "@/components/employee-layout";
 import { api } from "@/api";
+import { toast } from 'sonner';
 import { format } from "date-fns";
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const EmployeeReports = () => {
-    const [dateFrom, setDateFrom] = useState(format(new Date().setDate(new Date().getDate() - 30), 'yyyy-MM-dd'));
-    const [dateTo, setDateTo] = useState(format(new Date(), 'yyyy-MM-dd'));
+    const [filterType, setFilterType] = useState('all'); // 'all' or 'dateRange'
+    const [dateFrom, setDateFrom] = useState(null);
+    const [dateTo, setDateTo] = useState(null);
 
     const [loading, setLoading] = useState(true);
     const [financials, setFinancials] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [bookings, setBookings] = useState([]);
 
+    const fetchReportsData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [finData, txData, bookingData] = await Promise.all([
+                api.get('/reports/financials'),
+                api.get('/reports/transactions'),
+                api.get('/bookings')
+            ]);
+            setFinancials(finData);
+            setTransactions(txData);
+            setBookings(bookingData);
+        } catch (error) {
+            console.error('Failed to fetch reports data:', error);
+            toast.error('Failed to load report data.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
-        const fetchReportsData = async () => {
-            try {
-                const [finData, txData, bookingData] = await Promise.all([
-                    api.get('/reports/financials'),
-                    api.get('/reports/transactions'),
-                    api.get('/bookings')
-                ]);
-                setFinancials(finData);
-                setTransactions(txData);
-                setBookings(bookingData);
-            } catch (error) {
-                console.error('Failed to fetch reports data:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchReportsData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const getStatusBadge = (status) => {
@@ -67,12 +77,128 @@ const EmployeeReports = () => {
         }
     };
 
-    const handleExport = (type) => {
-        console.log(`Exporting ${type} report...`);
-        alert(`Exporting ${type} report... (Feature coming soon)`);
+    // --- Export Functions ---
+    const exportCSV = (data, filename, headers, rowMapper) => {
+        const csvContent = [
+            headers.join(','),
+            ...data.map(rowMapper)
+        ].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`Exported ${filename}`);
     };
 
-    const docReports = bookings.filter(b => b.status === 'VERIFIED' || b.status === 'APPROVED' || b.status === 'REJECTED');
+    const filteredBookings = useMemo(() => {
+        if (filterType === 'all' || !dateFrom || !dateTo) {
+            return bookings;
+        }
+        const from = new Date(dateFrom);
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59);
+        return bookings.filter(b => {
+            const d = new Date(b.startDate);
+            return d >= from && d <= to;
+        });
+    }, [bookings, filterType, dateFrom, dateTo]);
+
+    // Filter transactions by date as well
+    const filteredTransactions = useMemo(() => {
+        if (filterType === 'all' || !dateFrom || !dateTo) {
+            return transactions;
+        }
+        const from = new Date(dateFrom);
+        const to = new Date(dateTo);
+        to.setHours(23, 59, 59);
+        return transactions.filter(tx => {
+            if (!tx.createdAt) return true;
+            const d = new Date(tx.createdAt);
+            return d >= from && d <= to;
+        });
+    }, [transactions, filterType, dateFrom, dateTo]);
+
+    // Export functions use filteredBookings instead of bookings
+    const handleExportBookingsCSV = () => {
+        exportCSV(
+            filteredBookings,
+            'bookings_report.csv',
+            ['ID', 'Customer', 'Car', 'Start Date', 'End Date', 'Status', 'Total Amount'],
+            b => [
+                b.id,
+                b.user?.customerProfile ? `${b.user.customerProfile.firstName} ${b.user.customerProfile.lastName}` : b.user?.email,
+                `${b.car?.make || ''} ${b.car?.model || ''}`.trim(),
+                b.startDate ? format(new Date(b.startDate), 'yyyy-MM-dd') : '',
+                b.endDate ? format(new Date(b.endDate), 'yyyy-MM-dd') : '',
+                b.status,
+                b.totalAmount
+            ].map(v => `"${v}"`).join(',')
+        );
+    };
+
+    const handleExportVerificationCSV = () => {
+        const docReports = filteredBookings.filter(b => ['VERIFIED', 'APPROVED', 'REJECTED'].includes(b.status));
+        exportCSV(
+            docReports,
+            'verification_history.csv',
+            ['Booking ID', 'Customer', 'Status', 'Last Updated'],
+            b => [
+                b.id,
+                b.user?.customerProfile ? `${b.user.customerProfile.firstName} ${b.user.customerProfile.lastName}` : b.user?.email,
+                b.status,
+                b.updatedAt ? format(new Date(b.updatedAt), 'yyyy-MM-dd HH:mm') : ''
+            ].map(v => `"${v}"`).join(',')
+        );
+    };
+
+    const handleExportRevenuePDF = () => {
+        const doc = new jsPDF();
+        doc.setFontSize(18);
+        doc.text('Teddy Car Rental — Revenue Summary', 105, 20, { align: 'center' });
+        doc.setFontSize(10);
+        doc.text(`Generated: ${format(new Date(), 'MMMM dd, yyyy')}`, 105, 28, { align: 'center' });
+
+        autoTable(doc, {
+            startY: 40,
+            head: [['Metric', 'Value']],
+            body: [
+                ['Total Revenue', `ETB ${Number(financials?.summary?.totalRevenue || 0).toLocaleString()}`],
+                ['Total Expenses', `ETB ${Number(financials?.summary?.totalExpenses || 0).toLocaleString()}`],
+                ['Net Profit', `ETB ${Number(financials?.summary?.netProfit || 0).toLocaleString()}`],
+                ['Profit Margin', `${Number(financials?.summary?.profitMargin || 0).toFixed(1)}%`],
+                ['Total Bookings', filteredBookings.length],
+                ['Active Rentals', financials?.stats?.activeRentals || 0],
+            ],
+        });
+
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 15,
+            head: [['TX ID', 'Customer', 'Method', 'Amount', 'Status']],
+            body: transactions.slice(0, 20).map(tx => [tx.id, tx.customer, tx.method, `ETB ${Number(tx.amount).toLocaleString()}`, tx.status]),
+        });
+
+        doc.save(`revenue_summary_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        toast.success('Revenue PDF exported!');
+    };
+
+    // Build per-car utilization from filtered bookings
+    const carUtilization = Object.values(
+        filteredBookings.reduce((acc, b) => {
+            const id = b.car?.id;
+            if (!id) return acc;
+            if (!acc[id]) {
+                acc[id] = { car: b.car, count: 0, totalRevenue: 0 };
+            }
+            acc[id].count++;
+            acc[id].totalRevenue += Number(b.totalAmount || 0);
+            return acc;
+        }, {})
+    ).sort((a, b) => b.count - a.count);
+
+    const docReports = filteredBookings.filter(b => ['VERIFIED', 'APPROVED', 'REJECTED'].includes(b.status));
 
     return (
         <EmployeeLayout>
@@ -91,7 +217,7 @@ const EmployeeReports = () => {
                         <FileText className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{loading ? <Loader2 className="animate-spin h-5 w-5" /> : bookings.length}</div>
+                        <div className="text-2xl font-bold">{loading ? <Loader2 className="animate-spin h-5 w-5" /> : filteredBookings.length}</div>
                         <p className="text-xs text-muted-foreground mt-1">
                             Lifetime bookings
                         </p>
@@ -141,31 +267,75 @@ const EmployeeReports = () => {
                 </Card>
             </div>
 
-            {/* Date Range Filter */}
+            {/* Filter Controls */}
             <Card className="mb-6 border-border/60">
                 <CardHeader>
                     <CardTitle className="text-lg">Filter Reports</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-1">
-                            <label className="text-sm font-medium mb-2 block">From Date</label>
-                            <Input
-                                type="date"
-                                value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
-                            />
+                    <div className="flex flex-col md:flex-row gap-4 items-end">
+                        {/* Filter Type Toggle */}
+                        <div className="flex gap-2">
+                            <Button
+                                variant={filterType === 'all' ? "default" : "outline"}
+                                onClick={() => {
+                                    setFilterType('all');
+                                    setDateFrom(null);
+                                    setDateTo(null);
+                                }}
+                            >
+                                All
+                            </Button>
+                            <Button
+                                variant={filterType === 'dateRange' ? "default" : "outline"}
+                                onClick={() => setFilterType('dateRange')}
+                            >
+                                Date Range
+                            </Button>
                         </div>
-                        <div className="flex-1">
-                            <label className="text-sm font-medium mb-2 block">To Date</label>
-                            <Input
-                                type="date"
-                                value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
-                            />
-                        </div>
+
+                        {/* Date Range Pickers - shown when Date Range is selected */}
+                        {filterType === 'dateRange' && (
+                            <>
+                                <div className="flex-1">
+                                    <label className="text-sm font-medium mb-2 block">From Date</label>
+                                    <DatePicker
+                                        selected={dateFrom}
+                                        onChange={(date) => setDateFrom(date)}
+                                        selectsStart
+                                        startDate={dateFrom}
+                                        endDate={dateTo}
+                                        placeholderText="Select start date"
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        dateFormat="yyyy-MM-dd"
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="text-sm font-medium mb-2 block">To Date</label>
+                                    <DatePicker
+                                        selected={dateTo}
+                                        onChange={(date) => setDateTo(date)}
+                                        selectsEnd
+                                        startDate={dateFrom}
+                                        endDate={dateTo}
+                                        minDate={dateFrom}
+                                        placeholderText="Select end date"
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                        dateFormat="yyyy-MM-dd"
+                                    />
+                                </div>
+                            </>
+                        )}
+
                         <div className="flex items-end">
-                            <Button disabled={loading}>Apply Filter</Button>
+                            <Button
+                                disabled={loading || filterType === 'all'}
+                                onClick={() => {
+                                    toast.success('Filter applied successfully');
+                                }}
+                            >
+                                Apply Filter
+                            </Button>
                         </div>
                     </div>
                 </CardContent>
@@ -190,7 +360,7 @@ const EmployeeReports = () => {
                                 <h3 className="font-bold text-lg">Detailed Bookings</h3>
                                 <p className="text-sm text-muted-foreground">All booking records and their current status</p>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => handleExport('Bookings CSV')} disabled={loading}>
+                            <Button variant="outline" size="sm" onClick={handleExportBookingsCSV} disabled={loading}>
                                 <Download size={14} className="mr-2" />
                                 Export CSV
                             </Button>
@@ -215,14 +385,14 @@ const EmployeeReports = () => {
                                             </TableCell>
                                         </TableRow>
                                     )}
-                                    {!loading && bookings.length === 0 && (
+                                    {!loading && filteredBookings.length === 0 && (
                                         <TableRow>
                                             <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
                                                 No bookings found.
                                             </TableCell>
                                         </TableRow>
                                     )}
-                                    {bookings.map((booking) => (
+                                    {filteredBookings.map((booking) => (
                                         <TableRow key={booking.id}>
                                             <TableCell className="font-mono font-medium text-xs">#{booking.id}</TableCell>
                                             <TableCell>
@@ -252,7 +422,7 @@ const EmployeeReports = () => {
                                 <h3 className="font-bold text-lg">Verification History</h3>
                                 <p className="text-sm text-muted-foreground">Activity log for document approvals and rejections</p>
                             </div>
-                            <Button variant="outline" size="sm" onClick={() => handleExport('Verification CSV')} disabled={loading}>
+                            <Button variant="outline" size="sm" onClick={handleExportVerificationCSV} disabled={loading}>
                                 <Download size={14} className="mr-2" />
                                 Export CSV
                             </Button>
@@ -306,7 +476,7 @@ const EmployeeReports = () => {
                         <div className="space-y-6">
                             <div className="flex justify-between items-center">
                                 <h3 className="font-bold text-lg">Revenue Summary</h3>
-                                <Button variant="outline" size="sm" onClick={() => handleExport('Revenue PDF')} disabled={loading}>
+                                <Button variant="outline" size="sm" onClick={handleExportRevenuePDF} disabled={loading}>
                                     <Download size={14} className="mr-2" />
                                     Export PDF
                                 </Button>
@@ -371,7 +541,12 @@ const EmployeeReports = () => {
                                                     <TableCell colSpan={5} className="text-center py-4">Loading transactions...</TableCell>
                                                 </TableRow>
                                             )}
-                                            {transactions.map(tx => (
+                                            {!loading && filteredTransactions.length === 0 && (
+                                                <TableRow>
+                                                    <TableCell colSpan={5} className="text-center py-4">No transactions found.</TableCell>
+                                                </TableRow>
+                                            )}
+                                            {filteredTransactions.map(tx => (
                                                 <TableRow key={tx.id}>
                                                     <TableCell className="font-mono text-xs">{tx.id}</TableCell>
                                                     <TableCell className="text-sm">{tx.customer}</TableCell>
@@ -388,16 +563,42 @@ const EmployeeReports = () => {
                     </TabsContent>
 
                     <TabsContent value="utilization" className="m-0">
-                        <div className="p-20 text-center border-t border-border">
-                            <CarIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                            <h3 className="text-lg font-medium text-foreground">Advanced Fleet Analytics</h3>
-                            <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-2">
-                                Car utilization and detailed performance metrics are being processed. Check back soon for the full report.
-                            </p>
-                            <Button variant="outline" className="mt-6" disabled>
-                                Process Analytics
-                            </Button>
-                        </div>
+                        {loading ? (
+                            <div className="flex justify-center py-16"><Loader2 className="animate-spin text-primary" size={32} /></div>
+                        ) : carUtilization.length === 0 ? (
+                            <div className="p-20 text-center border-t border-border">
+                                <CarIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                                <p className="text-muted-foreground">No booking data in selected date range.</p>
+                            </div>
+                        ) : (
+                            <ScrollArea className="h-[400px]">
+                                <Table>
+                                    <TableHeader className="bg-muted/40">
+                                        <TableRow>
+                                            <TableHead>Vehicle</TableHead>
+                                            <TableHead>Plate Number</TableHead>
+                                            <TableHead className="text-center">Total Bookings</TableHead>
+                                            <TableHead className="text-right">Revenue Generated</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {carUtilization.map(({ car, count, totalRevenue }) => (
+                                            <TableRow key={car.id}>
+                                                <TableCell>
+                                                    <div className="font-medium">{car.make} {car.model}</div>
+                                                    <div className="text-xs text-muted-foreground capitalize">{car.category}</div>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-xs">{car.plateNumber}</TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge variant="secondary">{count} booking{count !== 1 ? 's' : ''}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right font-semibold">ETB {totalRevenue.toLocaleString()}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </ScrollArea>
+                        )}
                     </TabsContent>
 
                 </Tabs>

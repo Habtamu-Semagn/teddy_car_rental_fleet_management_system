@@ -10,13 +10,30 @@ const apiRequest = async (endpoint, options = {}) => {
         ...options.headers
     };
 
+    // Build query string from params if provided
+    let url = `${API_URL}${endpoint}`;
+    if (options.params) {
+        const searchParams = new URLSearchParams();
+        Object.entries(options.params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                searchParams.append(key, value);
+            }
+        });
+        const queryString = searchParams.toString();
+        if (queryString) {
+            url += `?${queryString}`;
+        }
+    }
+
     const config = {
         ...options,
         headers
     };
+    // Remove params from config since fetch doesn't use it
+    delete config.params;
 
     try {
-        const response = await fetch(`${API_URL}${endpoint}`, config);
+        const response = await fetch(url, config);
 
         let data;
         const contentType = response.headers.get("content-type");
@@ -44,6 +61,7 @@ const apiRequest = async (endpoint, options = {}) => {
 export const api = {
     get: (endpoint, options) => apiRequest(endpoint, { ...options, method: 'GET' }),
     post: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'POST', body: JSON.stringify(body) }),
+    put: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'PUT', body: JSON.stringify(body) }),
     patch: (endpoint, body, options) => apiRequest(endpoint, { ...options, method: 'PATCH', body: JSON.stringify(body) }),
     delete: (endpoint, options) => apiRequest(endpoint, { ...options, method: 'DELETE' }),
 
