@@ -350,7 +350,6 @@ const EmployeeReports = () => {
                             <TabsTrigger value="bookings">Booking Reports</TabsTrigger>
                             <TabsTrigger value="documents">Document Verification</TabsTrigger>
                             <TabsTrigger value="revenue">Revenue Summary</TabsTrigger>
-                            <TabsTrigger value="utilization">Car Utilization</TabsTrigger>
                         </TabsList>
                     </div>
 
@@ -560,45 +559,6 @@ const EmployeeReports = () => {
                                 </ScrollArea>
                             </div>
                         </div>
-                    </TabsContent>
-
-                    <TabsContent value="utilization" className="m-0">
-                        {loading ? (
-                            <div className="flex justify-center py-16"><Loader2 className="animate-spin text-primary" size={32} /></div>
-                        ) : carUtilization.length === 0 ? (
-                            <div className="p-20 text-center border-t border-border">
-                                <CarIcon className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                                <p className="text-muted-foreground">No booking data in selected date range.</p>
-                            </div>
-                        ) : (
-                            <ScrollArea className="h-[400px]">
-                                <Table>
-                                    <TableHeader className="bg-muted/40">
-                                        <TableRow>
-                                            <TableHead>Vehicle</TableHead>
-                                            <TableHead>Plate Number</TableHead>
-                                            <TableHead className="text-center">Total Bookings</TableHead>
-                                            <TableHead className="text-right">Revenue Generated</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {carUtilization.map(({ car, count, totalRevenue }) => (
-                                            <TableRow key={car.id}>
-                                                <TableCell>
-                                                    <div className="font-medium">{car.make} {car.model}</div>
-                                                    <div className="text-xs text-muted-foreground capitalize">{car.category}</div>
-                                                </TableCell>
-                                                <TableCell className="font-mono text-xs">{car.plateNumber}</TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant="secondary">{count} booking{count !== 1 ? 's' : ''}</Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right font-semibold">ETB {totalRevenue.toLocaleString()}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </ScrollArea>
-                        )}
                     </TabsContent>
 
                 </Tabs>

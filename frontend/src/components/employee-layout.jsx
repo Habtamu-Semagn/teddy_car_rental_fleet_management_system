@@ -96,55 +96,15 @@ const EmployeeLayout = ({ children }) => {
             <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
                 {/* Top Header - Using Card component */}
                 <Card className="border-b border-border h-16 flex flex-row items-center justify-between px-6 sticky top-0 z-50 rounded-none shadow-md bg-card">
-                    {/* Left Section: Menu Toggle + Search */}
+                    {/* Left Section: Menu Toggle */}
                     <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             <Menu size={20} />
                         </Button>
-                        <div className="relative w-96">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                            <Input
-                                placeholder="Search bookings or customers..."
-                                className="pl-10 bg-secondary/50 border-transparent focus:bg-background focus:border-primary/50 transition-all"
-                            />
-                        </div>
                     </div>
 
-                    {/* Right Section: Notifications + Theme + User Profile */}
+                    {/* Right Section: Theme Toggle + User Profile */}
                     <div className="flex items-center gap-2">
-                        {/* Notifications Dropdown */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary">
-                                    <Bell size={20} />
-                                    {(newRequestsCount + pendingActionsCount) > 0 && (
-                                        <span className="absolute top-2 right-2 h-2 w-2 bg-destructive rounded-full ring-2 ring-card"></span>
-                                    )}
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-80">
-                                <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <div className="flex gap-2 px-2 py-2">
-                                    <Badge variant="outline" className="text-xs">
-                                        {newRequestsCount} New Requests
-                                    </Badge>
-                                    <Badge variant="outline" className="text-xs">
-                                        {pendingActionsCount} Pending Actions
-                                    </Badge>
-                                </div>
-                                <DropdownMenuSeparator />
-                                <ScrollArea className="h-64">
-                                    {notifications.map((notif) => (
-                                        <DropdownMenuItem key={notif.id} className="flex flex-col items-start py-3">
-                                            <span className="text-sm font-medium">{notif.message}</span>
-                                            <span className="text-xs text-muted-foreground">{notif.time}</span>
-                                        </DropdownMenuItem>
-                                    ))}
-                                </ScrollArea>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-
                         {/* Theme Toggle */}
                         <ThemeToggle />
 
