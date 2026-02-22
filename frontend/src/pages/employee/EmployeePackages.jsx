@@ -83,8 +83,8 @@ const EmployeePackages = () => {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <Card className="hover:shadow-md transition-shadow cursor-pointer border-border/60">
+            <div className="flex flex-wrap gap-6 mb-8">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer border-border/60 w-full md:w-auto md:min-w-[280px]">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">Total Packages</CardTitle>
                         <Package className="h-4 w-4 text-primary" />
@@ -93,30 +93,6 @@ const EmployeePackages = () => {
                         <div className="text-2xl font-bold">{packages.length}</div>
                         <p className="text-xs text-muted-foreground mt-1">
                             Available options
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer border-border/60">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Most Popular</CardTitle>
-                        <CheckCircle className="h-4 w-4 text-primary" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">Weekend Special</div>
-                        <p className="text-xs text-muted-foreground mt-1 text-green-600 dark:text-green-400">
-                            92% popularity
-                        </p>
-                    </CardContent>
-                </Card>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer border-border/60">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground">Active Assignments</CardTitle>
-                        <Clock className="h-4 w-4 text-primary" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">12</div>
-                        <p className="text-xs text-muted-foreground mt-1 text-blue-600 dark:text-blue-400">
-                            Currently assigned
                         </p>
                     </CardContent>
                 </Card>

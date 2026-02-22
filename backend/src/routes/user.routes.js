@@ -7,5 +7,6 @@ const { authenticate, authorize } = require('../middlewares/auth.middleware');
 router.get('/', authenticate, authorize('ADMIN', 'EMPLOYEE'), userController.getAllUsers);
 router.get('/:id', authenticate, authorize('ADMIN', 'EMPLOYEE'), userController.getUserById);
 router.patch('/:id/role', authenticate, authorize('ADMIN'), userController.updateUserRole);
+router.delete('/:id', authenticate, authorize('ADMIN'), userController.deleteUser);
 
 module.exports = router;

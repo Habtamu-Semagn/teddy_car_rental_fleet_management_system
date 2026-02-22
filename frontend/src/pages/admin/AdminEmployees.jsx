@@ -116,7 +116,7 @@ const AdminEmployees = () => {
 
     const handleRoleUpdate = async (userId, newRole) => {
         try {
-            await api.patch(`/users/${userId}`, { role: newRole });
+            await api.patch(`/users/${userId}/role`, { role: newRole });
             toast.success('Role updated successfully!');
             fetchEmployees();
         } catch (error) {
