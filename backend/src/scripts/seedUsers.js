@@ -30,7 +30,7 @@ async function main() {
             password: adminPassword,
             role: 'ADMIN'
         },
-        create: {
+        create: {e
             email: 'admin@gmail.com',
             password: adminPassword,
             role: 'ADMIN'

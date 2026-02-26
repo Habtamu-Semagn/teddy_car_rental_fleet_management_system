@@ -2,18 +2,16 @@ require('dotenv').config();
 const prisma = require('../src/utils/prismaClient');
 const { hashPassword } = require('../src/utils/hash');
 
-
-
 async function main() {
     console.log('Seeding database...');
 
     // Create Admin
-    const adminPassword = await hashPassword('admin123');
+    const adminPassword = await hashPassword('Password123!');
     const admin = await prisma.user.upsert({
-        where: { email: 'admin@teddy.com' },
+        where: { email: 'admin@teddyrental.com' },
         update: {},
         create: {
-            email: 'admin@teddy.com',
+            email: 'admin@teddyrental.com',
             password: adminPassword,
             role: 'ADMIN',
             customerProfile: {
@@ -29,12 +27,12 @@ async function main() {
     console.log('Admin created:', admin.email);
 
     // Create Employee
-    const employeePassword = await hashPassword('employee123');
+    const employeePassword = await hashPassword('Password123!');
     const employee = await prisma.user.upsert({
-        where: { email: 'employee@teddy.com' },
+        where: { email: 'employee@teddyrental.com' },
         update: {},
         create: {
-            email: 'employee@teddy.com',
+            email: 'employee@teddyrental.com',
             password: employeePassword,
             role: 'EMPLOYEE',
             customerProfile: {
@@ -128,6 +126,83 @@ async function main() {
     }
 
     console.log('Cars created: basic and additional 10 cars added.');
+
+    // Create Packages
+    const packages = [
+        {
+            name: 'Basic Daily',
+            price: 1200,
+            period: 'Daily',
+            features: ['Basic Insurance', '24/7 Support', 'Standard Pickup'],
+            category: 'Economy',
+            isActive: true
+        },
+        {
+            name: 'Standard Daily',
+            price: 2000,
+            period: 'Daily',
+            features: ['Full Insurance', '24/7 Support', 'Airport Pickup', 'Free Cancellation'],
+            category: 'Standard',
+            isActive: true
+        },
+        {
+            name: 'Premium Daily',
+            price: 3500,
+            period: 'Daily',
+            features: ['Premium Insurance', 'Personal Driver', 'Airport Pickup/Dropoff', 'Unlimited Mileage', 'VIP Support'],
+            category: 'Premium',
+            isActive: true
+        },
+        {
+            name: 'Weekly Economy',
+            price: 7000,
+            period: 'Weekly',
+            features: ['Basic Insurance', '24/7 Support', 'Standard Pickup'],
+            category: 'Economy',
+            isActive: true
+        },
+        {
+            name: 'Weekly Standard',
+            price: 12000,
+            period: 'Weekly',
+            features: ['Full Insurance', '24/7 Support', 'Airport Pickup', 'Free Cancellation'],
+            category: 'Standard',
+            isActive: true
+        },
+        {
+            name: 'Monthly Economy',
+            price: 25000,
+            period: 'Monthly',
+            features: ['Basic Insurance', '24/7 Support', 'Standard Pickup', 'Regular Maintenance'],
+            category: 'Economy',
+            isActive: true
+        },
+        {
+            name: 'Monthly Standard',
+            price: 45000,
+            period: 'Monthly',
+            features: ['Full Insurance', '24/7 Support', 'Airport Pickup', 'Free Cancellation', 'Regular Maintenance'],
+            category: 'Standard',
+            isActive: true
+        },
+        {
+            name: 'Monthly Premium',
+            price: 80000,
+            period: 'Monthly',
+            features: ['Premium Insurance', 'Personal Driver', 'Airport Pickup/Dropoff', 'Unlimited Mileage', 'VIP Support', 'Regular Maintenance', 'Replacement Vehicle'],
+            category: 'Premium',
+            isActive: true
+        }
+    ];
+
+    for (const pkg of packages) {
+        await prisma.package.upsert({
+            where: { name: pkg.name },
+            update: {},
+            create: pkg
+        });
+    }
+    console.log('Packages created: 8 rental packages added.');
 
     // Create a sample booking (only if none exist for this customer+car combo)
     const existingBooking = await prisma.booking.findFirst({
