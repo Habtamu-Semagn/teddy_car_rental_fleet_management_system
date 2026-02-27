@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Users, Plus, Search, Mail, Phone,
     ShieldCheck, UserPlus, MoreHorizontal,
@@ -47,6 +48,7 @@ import { api } from "@/api";
 import { toast } from 'sonner';
 
 const AdminEmployees = () => {
+    const { t } = useTranslation();
     const [employees, setEmployees] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -104,7 +106,7 @@ const AdminEmployees = () => {
         setSubmitting(true);
         try {
             await api.post('/auth/register', formData);
-            toast.success('Staff member added successfully!');
+            toast.success(t('admin.staffAdded'));
             setIsDialogOpen(false);
             fetchEmployees();
         } catch (error) {
@@ -117,7 +119,7 @@ const AdminEmployees = () => {
     const handleRoleUpdate = async (userId, newRole) => {
         try {
             await api.patch(`/users/${userId}/role`, { role: newRole });
-            toast.success('Role updated successfully!');
+            toast.success(t('admin.roleUpdated'));
             fetchEmployees();
         } catch (error) {
             toast.error(error.message || 'Failed to update role');
@@ -132,7 +134,7 @@ const AdminEmployees = () => {
             onConfirm: async () => {
                 try {
                     await api.delete(`/users/${userId}`);
-                    toast.success('Account deactivated.');
+                    toast.success(t('admin.accountDeactivated'));
                     fetchEmployees();
                 } catch (error) {
                     toast.error(error.message || 'Failed to deactivate account');

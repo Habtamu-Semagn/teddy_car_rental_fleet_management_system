@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
 const Register = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { register } = useAuth();
     const [formData, setFormData] = useState({
@@ -28,7 +30,7 @@ const Register = () => {
         setError('');
 
         if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
+            setError(t('auth.passwordsNoMatch'));
             return;
         }
 
@@ -67,14 +69,14 @@ const Register = () => {
         <div className="min-h-[85vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-primary mb-2">Join Teddy Rental</h1>
+                    <h1 className="text-2xl font-bold text-primary mb-2">{t('auth.joinTeddy')}</h1>
                     <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                        Create your account
+                        {t('auth.createAccount')}
                     </h2>
                     <p className="mt-2 text-center text-sm text-gray-600">
-                        Already have an account?{' '}
+                        {t('auth.alreadyHaveAccount')}{' '}
                         <Link to={carId ? `/login?carId=${carId}` : '/login'} className="font-semibold text-primary hover:text-opacity-80 transition-colors">
-                            Sign in here
+                            {t('auth.signInHere')}
                         </Link>
                     </p>
                 </div>
@@ -94,7 +96,7 @@ const Register = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="firstName" className="block text-sm font-semibold text-gray-700 mb-1">
-                                    First Name
+                                    {t('auth.firstName')}
                                 </label>
                                 <input
                                     id="firstName"
@@ -108,7 +110,7 @@ const Register = () => {
                             </div>
                             <div>
                                 <label htmlFor="lastName" className="block text-sm font-semibold text-gray-700 mb-1">
-                                    Last Name
+                                    {t('auth.lastName')}
                                 </label>
                                 <input
                                     id="lastName"
@@ -124,7 +126,7 @@ const Register = () => {
 
                         <div>
                             <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-1">
-                                Email address
+                                {t('auth.emailAddress')}
                             </label>
                             <input
                                 id="email"
@@ -140,7 +142,7 @@ const Register = () => {
 
                         <div>
                             <label htmlFor="phone" className="block text-sm font-semibold text-gray-700 mb-1">
-                                Phone Number
+                                {t('auth.phone')}
                             </label>
                             <input
                                 id="phone"
@@ -156,7 +158,7 @@ const Register = () => {
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-1">
-                                    Password
+                                    {t('auth.password')}
                                 </label>
                                 <input
                                     id="password"
@@ -171,7 +173,7 @@ const Register = () => {
 
                             <div>
                                 <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-1">
-                                    Confirm
+                                    {t('auth.confirmPassword')}
                                 </label>
                                 <input
                                     id="confirmPassword"
@@ -187,12 +189,12 @@ const Register = () => {
 
                         <div className="pt-4 flex gap-4">
                             <Button type="submit" isLoading={loading} className="w-full bg-gray-900 hover:bg-black text-white border-gray-900 shadow-xl hover:shadow-gray-900/40 transition-all py-4 font-bold active:scale-95">
-                                Sign Up
+                                {t('auth.signUp')}
                             </Button>
                         </div>
                         <div className="text-center">
                             <Button type="button" variant="outline" onClick={() => navigate('/')} className="w-full py-3.5 text-gray-900">
-                                Cancel
+                                {t('auth.cancel')}
                             </Button>
                         </div>
                     </form>

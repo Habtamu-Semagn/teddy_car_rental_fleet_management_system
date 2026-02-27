@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import { Package, Check, Calendar, ArrowLeft, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,6 +9,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useAuth } from '../context/AuthContext';
 
 const Packages = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { isAuthenticated, user } = useAuth();
@@ -31,7 +33,7 @@ const Packages = () => {
                 setPackages(data);
             } catch (error) {
                 console.error('Failed to fetch packages:', error);
-                toast.error('Failed to load packages');
+                toast.error(t('booking.failedToLoadPackages'));
             } finally {
                 setLoading(false);
             }
@@ -41,7 +43,7 @@ const Packages = () => {
 
     const handleBookPackage = (pkg) => {
         if (!startDate || !endDate) {
-            toast.error('Please select pickup and return dates first');
+            toast.error(t('booking.selectDatesError'));
             return;
         }
 
@@ -72,7 +74,7 @@ const Packages = () => {
                 <div className="container mx-auto px-4 py-4">
                     <Link to="/" className="inline-flex items-center text-gray-600 hover:text-primary transition-colors">
                         <ArrowLeft className="mr-2" size={20} />
-                        Back to Home
+                        {t('fleet.backHome')}
                     </Link>
                 </div>
             </div>
@@ -80,9 +82,9 @@ const Packages = () => {
             {/* Hero */}
             <div className="bg-gray-900 text-white py-16">
                 <div className="container mx-auto px-4 text-center">
-                    <h1 className="text-4xl md:text-5xl font-extrabold mb-4">Our Rental Packages</h1>
+                    <h1 className="text-4xl md:text-5xl font-extrabold mb-4">{t('packagesPage.title')}</h1>
                     <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-                        Choose from our curated packages tailored to your travel needs
+                        {t('packagesPage.subtitle')}
                     </p>
                 </div>
             </div>
@@ -102,7 +104,7 @@ const Packages = () => {
                             startDate={startDate}
                             endDate={endDate}
                             minDate={new Date()}
-                            placeholderText="Pick-up Date"
+                            placeholderText={t('search.pickup')}
                             className="pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50"
                         />
                     </div>
@@ -118,19 +120,19 @@ const Packages = () => {
                             startDate={startDate}
                             endDate={endDate}
                             minDate={startDate || new Date()}
-                            placeholderText="Return Date"
+                            placeholderText={t('search.return')}
                             className="pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50"
                         />
                     </div>
                     {!startDate || !endDate ? (
                         <span className="text-sm text-gray-500 ml-2">
                             <Search className="inline mr-1" size={16} />
-                            Select dates to see available packages
+                            {t('packagesPage.selectDates')}
                         </span>
                     ) : (
                         <span className="text-sm text-green-600 ml-2 font-medium">
                             <Check className="inline mr-1" size={16} />
-                            Dates selected - ready to book!
+                            {t('packagesPage.readyToBook')}
                         </span>
                     )}
                 </div>
@@ -163,14 +165,14 @@ const Packages = () => {
 
                                 {pkg.category && (
                                     <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-medium mb-4 w-fit">
-                                        {pkg.category}
+                                        {t(`search.${pkg.category.toLowerCase()}`)}
                                     </span>
                                 )}
 
                                 <div className="mb-6">
                                     <span className="text-4xl font-extrabold text-primary">{pkg.price?.toLocaleString()}</span>
                                     <span className="text-gray-500 ml-2">ETB</span>
-                                    <span className="text-gray-400 text-sm block mt-1">Total price</span>
+                                    <span className="text-gray-400 text-sm block mt-1">{t('packagesPage.totalPrice')}</span>
                                 </div>
 
                                 {pkg.features && pkg.features.length > 0 && (
@@ -191,7 +193,7 @@ const Packages = () => {
                                     }}
                                     className="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors"
                                 >
-                                    Book This Package
+                                    {t('packagesPage.bookPackage')}
                                 </button>
                             </div>
                         ))}
@@ -199,14 +201,14 @@ const Packages = () => {
                 ) : (
                     <div className="text-center py-16">
                         <Package className="mx-auto text-gray-300 mb-4" size={64} />
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">No Packages Available</h3>
-                        <p className="text-gray-500 mb-6">We don't have any packages available at the moment.</p>
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{t('packagesPage.noPackages')}</h3>
+                        <p className="text-gray-500 mb-6">{t('packagesPage.noPackagesDesc')}</p>
                         <Link
                             to="/"
                             className="inline-flex items-center bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors"
                         >
                             <ArrowLeft className="mr-2" size={20} />
-                            Browse Our Fleet
+                            {t('hero.browseFleet')}
                         </Link>
                     </div>
                 )}

@@ -6,8 +6,10 @@ import { api } from '@/api';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 const Confirmation = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [booking, setBooking] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -69,10 +71,10 @@ const Confirmation = () => {
             doc.text('Thank you for choosing Teddy Car Rental!', 105, finalY + 20, { align: 'center' });
 
             doc.save(`Receipt_BK_${ref}.pdf`);
-            toast.success('Receipt downloaded successfully');
+            toast.success(t('booking.confirmation.receiptSuccess'));
         } catch (error) {
             console.error('Receipt generation failed:', error);
-            toast.error('Failed to generate receipt. Please try again.');
+            toast.error(t('booking.confirmation.receiptError'));
         }
     };
 
@@ -125,10 +127,10 @@ const Confirmation = () => {
             doc.text('This document is electronically generated and accepted at the time of booking.', 105, finalY + 20, { align: 'center' });
 
             doc.save(`Agreement_BK_${booking?.id || 'Ref'}.pdf`);
-            toast.success('Agreement downloaded successfully');
+            toast.success(t('booking.confirmation.agreementSuccess'));
         } catch (error) {
             console.error('Agreement generation failed:', error);
-            toast.error('Failed to generate agreement. Please try again.');
+            toast.error(t('booking.confirmation.agreementError'));
         }
     };
 
@@ -147,14 +149,14 @@ const Confirmation = () => {
                     <CheckCircle className="h-10 w-10 text-green-600 animate-bounce" />
                 </div>
 
-                <h2 className="font-display text-3xl font-extrabold text-gray-900 mb-2">Booking Confirmed!</h2>
+                <h2 className="font-display text-3xl font-extrabold text-gray-900 mb-2">{t('booking.confirmation.title')}</h2>
                 <p className="text-gray-500 mb-8">
-                    Thank you for choosing Teddy Rental. Your payment was successful and your car is reserved.
+                    {t('booking.confirmation.successDesc')}
                 </p>
 
                 <div className="bg-gray-50 rounded-2xl p-6 mb-8 text-left space-y-4 border border-gray-100">
                     <div className="flex justify-between items-center">
-                        <span className="text-gray-500 font-medium">Booking Reference</span>
+                        <span className="text-gray-500 font-medium">{t('booking.confirmation.reference')}</span>
                         <span className="font-mono font-bold text-primary bg-primary/5 px-3 py-1 rounded-lg">
                             #BK-{booking?.id?.toString().padStart(5, '0') || 'N/A'}
                         </span>
@@ -162,30 +164,30 @@ const Confirmation = () => {
                     {booking?.package ? (
                         <>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-500 font-medium">Package</span>
+                                <span className="text-gray-500 font-medium">{t('booking.confirmation.package')}</span>
                                 <span className="font-semibold text-gray-900">{booking.package.name}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-500 font-medium">Category</span>
+                                <span className="text-gray-500 font-medium">{t('booking.confirmation.category')}</span>
                                 <span className="font-semibold text-gray-900">{booking.package.category}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-500 font-medium">Duration</span>
+                                <span className="text-gray-500 font-medium">{t('booking.confirmation.duration')}</span>
                                 <span className="font-semibold">{booking.package.period}</span>
                             </div>
                         </>
                     ) : (
                         <div className="flex justify-between items-center">
-                            <span className="text-gray-500 font-medium">Vehicle</span>
+                            <span className="text-gray-500 font-medium">{t('booking.confirmation.vehicle')}</span>
                             <span className="font-semibold text-gray-900">{booking?.car ? `${booking.car.make} ${booking.car.model}` : 'N/A'}</span>
                         </div>
                     )}
                     <div className="flex justify-between items-center">
-                        <span className="text-gray-500 font-medium">Pickup Date</span>
+                        <span className="text-gray-500 font-medium">{t('booking.confirmation.pickupDate')}</span>
                         <span className="font-semibold">{booking?.startDate ? new Date(booking.startDate).toLocaleDateString() : 'N/A'}</span>
                     </div>
                     <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                        <span className="text-gray-500 font-medium text-sm">Amount Paid</span>
+                        <span className="text-gray-500 font-medium text-sm">{t('booking.confirmation.amountPaid')}</span>
                         <span className="font-bold text-emerald-600">{booking?.totalAmount?.toLocaleString() || '0'} ETB</span>
                     </div>
                 </div>
@@ -198,7 +200,7 @@ const Confirmation = () => {
                             className="flex-1 py-6 rounded-xl border-gray-200 hover:bg-gray-50"
                         >
                             <Download size={18} className="mr-2" />
-                            Receipt
+                            {t('booking.confirmation.receipt')}
                         </Button>
                         <Button
                             variant="outline"
@@ -206,7 +208,7 @@ const Confirmation = () => {
                             className="flex-1 py-6 rounded-xl border-gray-200 hover:bg-gray-50"
                         >
                             <FileText size={18} className="mr-2" />
-                            Agreement
+                            {t('booking.confirmation.agreement')}
                         </Button>
                     </div>
 
@@ -214,13 +216,13 @@ const Confirmation = () => {
                         <Link to="/my-bookings" className="block">
                             <Button variant="outline" className="w-full py-6 rounded-xl text-lg border-gray-200 hover:bg-gray-50 flex items-center justify-center">
                                 <Briefcase size={18} className="mr-2" />
-                                View My Rentals
+                                {t('booking.confirmation.viewMyRentals')}
                             </Button>
                         </Link>
                         <Link to="/" className="block">
                             <Button className="w-full py-6 rounded-xl text-lg shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center">
                                 <Home size={18} className="mr-2" />
-                                Return to Fleet
+                                {t('booking.confirmation.returnToFleet')}
                             </Button>
                         </Link>
                     </div>
@@ -232,7 +234,7 @@ const Confirmation = () => {
                         }}
                         className="block w-full text-sm text-gray-400 hover:text-gray-900 mt-6 transition-colors"
                     >
-                        Sign Out
+                        {t('booking.confirmation.signOut')}
                     </button>
                 </div>
             </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format } from "date-fns";
 import {
     CheckCircle, CheckCircle2, XCircle, Eye, FileCheck, ClipboardCheck, AlertCircle, TrendingUp,
@@ -57,6 +58,7 @@ const parseCoordinates = (locationString) => {
 };
 
 const EmployeeDashboard = () => {
+    const { t } = useTranslation();
     // Modal states
     const [verifyModalOpen, setVerifyModalOpen] = useState(false);
     const [approveModalOpen, setApproveModalOpen] = useState(false);
@@ -157,7 +159,7 @@ const EmployeeDashboard = () => {
             setRequests(prev => prev.map(r => r.id === selectedRequest.id ? updatedBooking : r));
             setVerifyModalOpen(false);
             setVerificationNotes('');
-            toast.success(approved ? "Documents verified successfully" : "Documents rejected", { id: 'verify-task' });
+            toast.success(approved ? t('employee.docsVerified') : t('employee.docsRejected'), { id: 'verify-task' });
         } catch (error) {
             console.error('Failed to update verification status:', error);
             toast.error(error.message || "Failed to update status", { id: 'verify-task' });
@@ -257,7 +259,7 @@ const EmployeeDashboard = () => {
             setSelectedCar('');
             setDriverName('');
             setDriverPhone('');
-            toast.success("Trip started successfully", { id: 'assign-task' });
+            toast.success(t('employee.tripStarted'), { id: 'assign-task' });
         } catch (error) {
             console.error('Failed to start trip:', error);
             toast.error(error.message || "Failed to start trip", { id: 'assign-task' });
@@ -276,7 +278,7 @@ const EmployeeDashboard = () => {
             });
             setRequests(prev => prev.map(r => r.id === selectedRequest.id ? updatedBooking : r));
             setCompleteModalOpen(false);
-            toast.success("Trip marked as completed!", { id: 'complete-task' });
+            toast.success(t('employee.tripCompleted'), { id: 'complete-task' });
         } catch (error) {
             console.error('Failed to complete trip:', error);
             toast.error(error.message || "Failed to complete trip", { id: 'complete-task' });

@@ -5,47 +5,94 @@ const { hashPassword } = require('../src/utils/hash');
 async function main() {
     console.log('Seeding database...');
 
-    // Create Admin
-    const adminPassword = await hashPassword('Password123!');
-    const admin = await prisma.user.upsert({
-        where: { email: 'admin@teddyrental.com' },
-        update: {},
-        create: {
+    // Create Admins
+    const admins = [
+        {
             email: 'admin@teddyrental.com',
-            password: adminPassword,
-            role: 'ADMIN',
-            customerProfile: {
-                create: {
-                    firstName: 'Teddy',
-                    lastName: 'Admin',
-                    phoneNumber: '0911000000',
-                    address: 'Addis Ababa'
-                }
-            }
+            firstName: 'Teddy',
+            lastName: 'Admin',
+            phoneNumber: '0911000000',
+            address: 'Addis Ababa'
+        },
+        {
+            email: 'admin2@teddyrental.com',
+            firstName: 'Sarah',
+            lastName: 'Manager',
+            phoneNumber: '0911000001',
+            address: 'Addis Ababa, Bole'
         }
-    });
-    console.log('Admin created:', admin.email);
+    ];
 
-    // Create Employee
-    const employeePassword = await hashPassword('Password123!');
-    const employee = await prisma.user.upsert({
-        where: { email: 'employee@teddyrental.com' },
-        update: {},
-        create: {
-            email: 'employee@teddyrental.com',
-            password: employeePassword,
-            role: 'EMPLOYEE',
-            customerProfile: {
-                create: {
-                    firstName: 'John',
-                    lastName: 'Employee',
-                    phoneNumber: '0911111111',
-                    address: 'Bole'
+    for (const adminData of admins) {
+        const password = await hashPassword('Password123!');
+        await prisma.user.upsert({
+            where: { email: adminData.email },
+            update: {},
+            create: {
+                email: adminData.email,
+                password: password,
+                role: 'ADMIN',
+                customerProfile: {
+                    create: {
+                        firstName: adminData.firstName,
+                        lastName: adminData.lastName,
+                        phoneNumber: adminData.phoneNumber,
+                        address: adminData.address
+                    }
                 }
             }
+        });
+        console.log('Admin created:', adminData.email);
+    }
+
+    // Create Employees
+    const employees = [
+        {
+            email: 'employee@teddyrental.com',
+            firstName: 'John',
+            lastName: 'Employee',
+            phoneNumber: '0911111111',
+            address: 'Bole'
+        },
+        {
+            email: 'employee2@teddyrental.com',
+            firstName: 'Abebe',
+            lastName: 'Kassa',
+            phoneNumber: '0922111222',
+            address: 'Megenagna'
+        },
+        {
+            email: 'employee3@teddyrental.com',
+            firstName: 'Marta',
+            lastName: 'Tesfaye',
+            phoneNumber: '0933111333',
+            address: 'Casanchis'
         }
-    });
-    console.log('Employee created:', employee.email);
+    ];
+
+    const seededEmployees = [];
+    for (const empData of employees) {
+        const password = await hashPassword('Password123!');
+        const emp = await prisma.user.upsert({
+            where: { email: empData.email },
+            update: {},
+            create: {
+                email: empData.email,
+                password: password,
+                role: 'EMPLOYEE',
+                customerProfile: {
+                    create: {
+                        firstName: empData.firstName,
+                        lastName: empData.lastName,
+                        phoneNumber: empData.phoneNumber,
+                        address: empData.address
+                    }
+                }
+            }
+        });
+        seededEmployees.push(emp);
+        console.log('Employee created:', empData.email);
+    }
 
     // Create Customer
     const customerPassword = await hashPassword('customer123');
@@ -196,11 +243,15 @@ async function main() {
     ];
 
     for (const pkg of packages) {
-        await prisma.package.upsert({
-            where: { name: pkg.name },
-            update: {},
-            create: pkg
+        const existingPkg = await prisma.package.findFirst({
+            where: { name: pkg.name }
         });
+
+        if (!existingPkg) {
+            await prisma.package.create({
+                data: pkg
+            });
+        }
     }
     console.log('Packages created: 8 rental packages added.');
 
@@ -216,7 +267,8 @@ async function main() {
                 startDate: new Date(),
                 endDate: new Date(new Date().setDate(new Date().getDate() + 3)),
                 totalAmount: 4500,
-                status: 'PENDING',
+                status: 'APPROVED',
+                processedById: seededEmployees[0].id,
                 pickupLocation: 'Bole Airport',
                 returnLocation: 'Bole Airport',
                 isDelivery: true,

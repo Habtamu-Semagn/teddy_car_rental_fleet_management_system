@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Car, Eye, Settings, Calendar, Search as SearchIcon, Loader2, Plus, Pencil, Trash2, Save, X, Upload, ImageIcon
 } from 'lucide-react';
@@ -38,6 +39,7 @@ import { api } from "@/api";
 import { toast } from "sonner";
 
 const EmployeeCars = () => {
+    const { t } = useTranslation();
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,10 +137,10 @@ const EmployeeCars = () => {
         try {
             if (isEditing) {
                 await api.put(`/cars/${selectedCar.id}`, carForm);
-                toast.success("Vehicle updated successfully");
+                toast.success(t('employee.carUpdated'));
             } else {
                 await api.post('/cars', carForm);
-                toast.success("New vehicle added to fleet");
+                toast.success(t('employee.carAdded'));
             }
             setFormModalOpen(false);
             fetchCars();
@@ -180,7 +182,7 @@ const EmployeeCars = () => {
         try {
             const response = await api.upload('/upload/document', formData);
             setCarForm({ ...carForm, imageUrl: response.url });
-            toast.success("Image uploaded successfully");
+            toast.success(t('employee.imageUploaded'));
         } catch (error) {
             console.error("Upload error:", error);
             toast.error("Failed to upload image");

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Car, Plus, Search, Filter, Edit, Trash2,
     CheckCircle2, AlertCircle, Clock, Loader2, Upload, ImageIcon
@@ -37,6 +38,7 @@ import { api } from "@/api";
 import { toast } from 'sonner';
 
 const AdminCars = () => {
+    const { t } = useTranslation();
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -127,8 +129,8 @@ const AdminCars = () => {
             } else {
                 await api.post('/cars', payload);
             }
+            toast.success(t('admin.carSaved'));
             setIsDialogOpen(false);
-            fetchCars();
         } catch (error) {
             toast.error(error.message || 'Failed to save car');
         } finally {
@@ -143,7 +145,7 @@ const AdminCars = () => {
     const confirmDeleteCar = async () => {
         try {
             await api.delete(`/cars/${confirmDeleteId}`);
-            toast.success('Vehicle removed.');
+            toast.success(t('admin.carDeleted'));
             fetchCars();
         } catch (error) {
             toast.error(error.message || 'Failed to delete car');

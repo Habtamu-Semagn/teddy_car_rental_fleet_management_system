@@ -161,7 +161,7 @@ const AdminDashboard = () => {
                         <p className="text-sm text-muted-foreground">Manage and verify new booking submissions.</p>
                     </div>
                     {loading && <Loader2 className="animate-spin text-primary" size={20} />}
-                    <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/5" onClick={() => navigate('/admin/bookings')}>View All</Button>
+                    {/* <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/5" onClick={() => navigate('/admin/bookings')}>View All</Button> */}
                 </div>
                 <Table>
                     <TableHeader className="bg-muted/40">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
 import { Search, Filter, Calendar, Loader2, ArrowRight, Users, Award, MapPin, Shield, Mail, Phone, Clock, CheckCircle2, ChevronDown } from 'lucide-react';
@@ -10,6 +11,7 @@ import { format } from "date-fns";
 import { useAuth } from '../context/AuthContext';
 
 const Home = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { isAuthenticated, user } = useAuth();
     const [cars, setCars] = useState([]);
@@ -28,7 +30,7 @@ const Home = () => {
 
     const handleBookNow = (carId) => {
         if (!startDate || !endDate) {
-            toast.error('Please select both Pick-up and Return dates first.');
+            toast.error(t('booking.selectDatesError'));
             window.scrollTo({ top: 300, behavior: 'smooth' }); // Scroll to search bar
             return;
         }
@@ -61,7 +63,7 @@ const Home = () => {
                 setCars(data);
             } catch (error) {
                 console.error('Failed to fetch cars:', error);
-                toast.error('Failed to update fleet availability');
+                toast.error(t('booking.failedToUpdateFleet'));
             } finally {
                 setLoading(false);
             }
@@ -94,20 +96,22 @@ const Home = () => {
                 <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center text-center">
                     <div className="max-w-5xl">
                         <h1 className="text-5xl md:text-7xl font-extrabold mb-6 tracking-tight leading-tight animate-in slide-in-from-bottom-5 fade-in duration-700 drop-shadow-lg">
-                            Drive Your <span className="text-primary text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Dream</span> Today
+                            <Trans i18nKey="hero.title">
+                                Drive Your <span className="text-primary text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Dream</span> Today
+                            </Trans>
                         </h1>
                         <p className="text-xl md:text-2xl text-gray-100 mb-10 max-w-3xl mx-auto font-light leading-relaxed animate-in slide-in-from-bottom-5 fade-in duration-700 delay-150 drop-shadow-md">
-                            Premium fleet management and car rental services in Ethiopia. <br />Unbeatable prices, unlimited miles.
+                            {t('hero.subtitle')}
                         </p>
                         <div className="animate-in slide-in-from-bottom-5 fade-in duration-700 delay-300">
                             <a href="#fleet" className="bg-primary text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-primary transition-all hover:scale-105 inline-block shadow-lg hover:shadow-primary/50">
-                                Browse Fleet
+                                {t('hero.browseFleet')}
                             </a>
                             <button
                                 onClick={() => navigate('/packages')}
                                 className="ml-4 bg-white/10 backdrop-blur-sm text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-white hover:text-gray-900 transition-all hover:scale-105 inline-block shadow-lg border border-white/30"
                             >
-                                View Packages
+                                {t('hero.viewPackages')}
                             </button>
                         </div>
                     </div>
@@ -121,7 +125,7 @@ const Home = () => {
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" size={20} />
                         <input
                             type="text"
-                            placeholder="Make or model..."
+                            placeholder={t('search.placeholder')}
                             className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50 focus:bg-white text-gray-900"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -135,7 +139,11 @@ const Home = () => {
                             value={filterCategory}
                             onChange={(e) => setFilterCategory(e.target.value)}
                         >
-                            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                            {categories.map(cat => (
+                                <option key={cat} value={cat}>
+                                    {cat === 'All' ? t('search.all') : t(`search.${cat.toLowerCase()}`)}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
@@ -151,10 +159,10 @@ const Home = () => {
                             startDate={startDate}
                             endDate={endDate}
                             minDate={new Date()}
-                            placeholderText="Pick-up Date"
+                            placeholderText={t('search.pickup')}
                             className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50 focus:bg-white text-gray-700 font-medium"
                         />
-                        <span className="absolute -top-2 left-4 bg-white px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider z-10">Pick-up</span>
+                        <span className="absolute -top-2 left-4 bg-white px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider z-10">{t('search.pickup')}</span>
                     </div>
 
                     <div className="lg:col-span-3 relative group">
@@ -169,10 +177,10 @@ const Home = () => {
                             startDate={startDate}
                             endDate={endDate}
                             minDate={startDate || new Date()}
-                            placeholderText="Return Date"
+                            placeholderText={t('search.return')}
                             className="w-full pl-12 pr-4 py-4 rounded-xl border border-gray-200 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none transition-all bg-gray-50 focus:bg-white text-gray-700 font-medium"
                         />
-                        <span className="absolute -top-2 left-4 bg-white px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider z-10">Return</span>
+                        <span className="absolute -top-2 left-4 bg-white px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider z-10">{t('search.return')}</span>
                     </div>
 
                     <div className="lg:col-span-1">
@@ -186,8 +194,8 @@ const Home = () => {
             {/* Car Layout */}
             <section id="fleet" className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-12">
-                    <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Our Premium Fleet</h2>
-                    <p className="text-gray-500 max-w-2xl mx-auto">Choose from our wide range of luxury and economy vehicles tailored to your needs.</p>
+                    <h2 className="text-4xl font-extrabold text-gray-900 mb-4">{t('fleet.title')}</h2>
+                    <p className="text-gray-500 max-w-2xl mx-auto">{t('fleet.subtitle')}</p>
                 </div>
 
                 {loading ? (
@@ -208,18 +216,18 @@ const Home = () => {
                                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                                         />
                                         <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-4 py-1.5 rounded-full text-xs font-bold shadow-sm uppercase tracking-wider text-gray-800 border border-gray-100">
-                                            {car.category}
+                                            {t(`search.${car.category.toLowerCase()}`)}
                                         </div>
                                         {car.status === 'RENTED' && (!startDate || !endDate) && (
                                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[2px]">
                                                 <span className="bg-red-500 text-white px-4 py-2 rounded-full font-bold shadow-lg transform -rotate-12 border-2 border-white">
-                                                    RENTED
+                                                    {t('fleet.rented')}
                                                 </span>
                                             </div>
                                         )}
                                         {car.status === 'RENTED' && startDate && endDate && (
                                             <div className="absolute top-4 left-4 bg-green-500/90 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-black shadow-lg uppercase tracking-widest text-white border border-white/20 animate-in fade-in zoom-in duration-500">
-                                                Available for dates
+                                                {t('fleet.availableForDates')}
                                             </div>
                                         )}
                                     </div>
@@ -229,11 +237,11 @@ const Home = () => {
                                         <div className="flex justify-between items-start mb-6">
                                             <div>
                                                 <h3 className="text-2xl font-bold text-gray-900 leading-tight group-hover:text-primary transition-colors">{car.make} {car.model}</h3>
-                                                <p className="text-gray-500 font-medium text-sm mt-1">{car.year} Model</p>
+                                                <p className="text-gray-500 font-medium text-sm mt-1">{t('fleet.modelYear', { year: car.year })}</p>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-2xl font-extrabold text-primary">{Number(car.dailyRate).toLocaleString()} <span className="text-sm font-normal text-gray-500">ETB</span></p>
-                                                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">per day</p>
+                                                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">{t('fleet.etbPerDay')}</p>
                                             </div>
                                         </div>
 
@@ -253,7 +261,7 @@ const Home = () => {
                                                     : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                                                     }`}
                                             >
-                                                {(car.status === 'AVAILABLE' || (startDate && endDate)) ? 'Book Now' : 'Currently Unavailable'}
+                                                {(car.status === 'AVAILABLE' || (startDate && endDate)) ? t('fleet.bookNow') : t('fleet.currentlyUnavailable')}
                                             </button>
                                         </div>
                                     </div>
@@ -267,15 +275,15 @@ const Home = () => {
                                 onClick={() => navigate('/fleet')}
                                 className="bg-primary text-white px-8 py-4 rounded-full font-bold text-lg hover:bg-gray-900 hover:text-white transition-all hover:scale-105 inline-block shadow-lg hover:shadow-primary/50"
                             >
-                                View More Cars
+                                {t('fleet.viewMore')}
                             </button>
                         </div>
                     </>
                 ) : (
                     <div className="text-center py-24 bg-white rounded-3xl shadow-sm border border-gray-100">
-                        <p className="text-xl text-gray-500 font-medium">No cars found matching your criteria.</p>
+                        <p className="text-xl text-gray-500 font-medium">{t('fleet.noCarsFound')}</p>
                         <button onClick={() => { setSearchTerm(''); setFilterCategory('All'); }} className="mt-4 text-primary font-bold hover:underline">
-                            Clear Filters
+                            {t('fleet.clearFilters')}
                         </button>
                     </div>
                 )}
@@ -285,8 +293,8 @@ const Home = () => {
             <section className="bg-white py-20">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Why Choose Teddy Car Rental</h2>
-                        <p className="text-gray-600 max-w-2xl mx-auto text-lg">Ethiopia's trusted fleet management and car rental service, providing reliable vehicles and exceptional customer experiences.</p>
+                        <h2 className="text-4xl font-extrabold text-gray-900 mb-4">{t('whyChoose.title')}</h2>
+                        <p className="text-gray-600 max-w-2xl mx-auto text-lg">{t('whyChoose.subtitle')}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -294,50 +302,50 @@ const Home = () => {
                             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                                 <Users className="text-primary" size={24} />
                             </div>
-                            <h3 className="font-bold text-gray-900 mb-2 text-center">Customer First</h3>
-                            <p className="text-sm text-gray-600 text-center leading-relaxed">We prioritize our customers' needs with 24/7 support and flexible rental options.</p>
+                            <h3 className="font-bold text-gray-900 mb-2 text-center">{t('whyChoose.customerFirst')}</h3>
+                            <p className="text-sm text-gray-600 text-center leading-relaxed">{t('whyChoose.customerFirstDesc')}</p>
                         </div>
                         <div className="bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary/20 transition-all duration-300">
                             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                                 <Award className="text-primary" size={24} />
                             </div>
-                            <h3 className="font-bold text-gray-900 mb-2 text-center">Quality Fleet</h3>
-                            <p className="text-sm text-gray-600 text-center leading-relaxed">Our vehicles are regularly maintained and inspected to ensure safety and comfort.</p>
+                            <h3 className="font-bold text-gray-900 mb-2 text-center">{t('whyChoose.qualityFleet')}</h3>
+                            <p className="text-sm text-gray-600 text-center leading-relaxed">{t('whyChoose.qualityFleetDesc')}</p>
                         </div>
                         <div className="bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary/20 transition-all duration-300">
                             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                                 <MapPin className="text-primary" size={24} />
                             </div>
-                            <h3 className="font-bold text-gray-900 mb-2 text-center">Local Expertise</h3>
-                            <p className="text-sm text-gray-600 text-center leading-relaxed">Based in Addis Ababa with deep knowledge of Ethiopian roads and travel needs.</p>
+                            <h3 className="font-bold text-gray-900 mb-2 text-center">{t('whyChoose.localExpertise')}</h3>
+                            <p className="text-sm text-gray-600 text-center leading-relaxed">{t('whyChoose.localExpertiseDesc')}</p>
                         </div>
                         <div className="bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-primary/20 transition-all duration-300">
                             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                                 <Shield className="text-primary" size={24} />
                             </div>
-                            <h3 className="font-bold text-gray-900 mb-2 text-center">Fully Insured</h3>
-                            <p className="text-sm text-gray-600 text-center leading-relaxed">All rentals include comprehensive insurance coverage for your peace of mind.</p>
+                            <h3 className="font-bold text-gray-900 mb-2 text-center">{t('whyChoose.fullyInsured')}</h3>
+                            <p className="text-sm text-gray-600 text-center leading-relaxed">{t('whyChoose.fullyInsuredDesc')}</p>
                         </div>
                     </div>
 
                     <div className="mt-16 bg-gray-50 rounded-2xl p-8 shadow-sm border border-gray-100">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Our Mission</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">{t('mission.title')}</h2>
                         <ul className="space-y-4 max-w-2xl mx-auto">
                             <li className="flex items-start gap-4 p-4 bg-white rounded-lg">
                                 <CheckCircle2 className="text-primary mt-0.5 flex-shrink-0" size={24} />
-                                <span className="text-gray-700 text-lg">Provide accessible, reliable, and affordable car rental services across Ethiopia</span>
+                                <span className="text-gray-700 text-lg">{t('mission.point1')}</span>
                             </li>
                             <li className="flex items-start gap-4 p-4 bg-white rounded-lg">
                                 <CheckCircle2 className="text-primary mt-0.5 flex-shrink-0" size={24} />
-                                <span className="text-gray-700 text-lg">Empower mobility for tourists, business professionals, and families</span>
+                                <span className="text-gray-700 text-lg">{t('mission.point2')}</span>
                             </li>
                             <li className="flex items-start gap-4 p-4 bg-white rounded-lg">
                                 <CheckCircle2 className="text-primary mt-0.5 flex-shrink-0" size={24} />
-                                <span className="text-gray-700 text-lg">Maintain every vehicle to the highest safety and comfort standards</span>
+                                <span className="text-gray-700 text-lg">{t('mission.point3')}</span>
                             </li>
                             <li className="flex items-start gap-4 p-4 bg-white rounded-lg">
                                 <CheckCircle2 className="text-primary mt-0.5 flex-shrink-0" size={24} />
-                                <span className="text-gray-700 text-lg">Deliver exceptional customer experiences through dedicated support</span>
+                                <span className="text-gray-700 text-lg">{t('mission.point4')}</span>
                             </li>
                         </ul>
                     </div>
@@ -348,8 +356,8 @@ const Home = () => {
             <section className="bg-gray-100 py-20">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Contact Us</h2>
-                        <p className="text-gray-600 max-w-2xl mx-auto text-lg">We'd love to hear from you. Reach out anytime.</p>
+                        <h2 className="text-4xl font-extrabold text-gray-900 mb-4">{t('contact.title')}</h2>
+                        <p className="text-gray-600 max-w-2xl mx-auto text-lg">{t('contact.subtitle')}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
@@ -357,29 +365,29 @@ const Home = () => {
                             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                                 <MapPin className="text-primary" size={22} />
                             </div>
-                            <h3 className="font-bold text-gray-900 text-center mb-2">Address</h3>
-                            <p className="text-gray-600 text-sm text-center">Bole Road, Addis Ababa, Ethiopia</p>
+                            <h3 className="font-bold text-gray-900 text-center mb-2">{t('contact.address')}</h3>
+                            <p className="text-gray-600 text-sm text-center">{t('contact.addressText')}</p>
                         </div>
                         <div className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg hover:border-primary/30 transition-all duration-300">
                             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                                 <Phone className="text-primary" size={22} />
                             </div>
-                            <h3 className="font-bold text-gray-900 text-center mb-2">Phone</h3>
+                            <h3 className="font-bold text-gray-900 text-center mb-2">{t('contact.phone')}</h3>
                             <p className="text-gray-600 text-sm text-center">+251 900 000 000</p>
                         </div>
                         <div className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg hover:border-primary/30 transition-all duration-300">
                             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                                 <Mail className="text-primary" size={22} />
                             </div>
-                            <h3 className="font-bold text-gray-900 text-center mb-2">Email</h3>
+                            <h3 className="font-bold text-gray-900 text-center mb-2">{t('contact.email')}</h3>
                             <p className="text-gray-600 text-sm text-center">info@teddyrental.com</p>
                         </div>
                         <div className="bg-white rounded-xl p-6 shadow-md border border-gray-200 hover:shadow-lg hover:border-primary/30 transition-all duration-300">
                             <div className="mx-auto w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
                                 <Clock className="text-primary" size={22} />
                             </div>
-                            <h3 className="font-bold text-gray-900 text-center mb-2">Business Hours</h3>
-                            <p className="text-gray-600 text-sm text-center">Mon - Sat: 8AM - 6PM</p>
+                            <h3 className="font-bold text-gray-900 text-center mb-2">{t('contact.businessHours')}</h3>
+                            <p className="text-gray-600 text-sm text-center">{t('contact.hoursText')}</p>
                         </div>
                     </div>
                 </div>
@@ -389,35 +397,35 @@ const Home = () => {
             <section className="bg-white py-20">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
-                        <h2 className="text-4xl font-extrabold text-gray-900 mb-4">Frequently Asked Questions</h2>
-                        <p className="text-gray-600 max-w-2xl mx-auto text-lg">Find answers to common questions about our car rental services.</p>
+                        <h2 className="text-4xl font-extrabold text-gray-900 mb-4">{t('faq.title')}</h2>
+                        <p className="text-gray-600 max-w-2xl mx-auto text-lg">{t('faq.subtitle')}</p>
                     </div>
 
                     <div className="max-w-3xl mx-auto space-y-4">
                         {[
                             {
-                                question: "What documents do I need to rent a car?",
-                                answer: "You need a valid driver's license, passport or national ID, and a credit card for the security deposit. International customers may need an international driving permit."
+                                question: t('faq.q1'),
+                                answer: t('faq.a1')
                             },
                             {
-                                question: "What is the minimum age to rent a car?",
-                                answer: "The minimum age to rent a car is 21 years. Drivers under 25 may incur a young driver surcharge. Some premium vehicles may have higher age requirements."
+                                question: t('faq.q2'),
+                                answer: t('faq.a2')
                             },
                             {
-                                question: "Is insurance included in the rental price?",
-                                answer: "Yes, all our rentals include basic comprehensive insurance coverage. You can also opt for additional coverage for extra peace of mind."
+                                question: t('faq.q3'),
+                                answer: t('faq.a3')
                             },
                             {
-                                question: "Can I pick up and drop off the car at different locations?",
-                                answer: "Yes, we offer one-way rentals. Additional fees may apply depending on the pickup and drop-off locations. Please contact us for more details."
+                                question: t('faq.q4'),
+                                answer: t('faq.a4')
                             },
                             {
-                                question: "What is your cancellation policy?",
-                                answer: "You can cancel your booking free of charge up to 24 hours before the pickup time. Late cancellations may incur a fee equal to one day's rental."
+                                question: t('faq.q5'),
+                                answer: t('faq.a5')
                             },
                             {
-                                question: "Do you offer airport pickup and drop-off?",
-                                answer: "Yes, we provide airport pickup and drop-off services at Addis Ababa Bole International Airport. Please provide your flight details when making your reservation."
+                                question: t('faq.q6'),
+                                answer: t('faq.a6')
                             }
                         ].map((faq, index) => (
                             <div

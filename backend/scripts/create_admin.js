@@ -4,7 +4,7 @@ const bcrypt = require('bcrypt');
 
 async function main() {
     const email = 'admin@teddyrental.com';
-    const password = 'Paswword123!';
+    const password = 'Password123!';
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const existingUser = await prisma.user.findUnique({

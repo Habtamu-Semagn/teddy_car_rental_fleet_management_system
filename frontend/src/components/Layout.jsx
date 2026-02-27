@@ -2,9 +2,12 @@ import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { Home as HomeIcon, Info, Mail, LogIn, UserPlus, Briefcase, User, LogOut } from 'lucide-react';
 import logo from '../assets/logo.png';
 import { useAuth } from '../context/AuthContext';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const Layout = () => {
     const { user, logout, isAuthenticated } = useAuth();
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -30,7 +33,7 @@ const Layout = () => {
                             <Link to="/" className="group flex items-center gap-2.5 text-gray-500 hover:text-gray-900 font-semibold transition-all duration-300">
                                 <HomeIcon size={18} className="group-hover:scale-110 transition-transform" />
                                 <span className="relative">
-                                    Home
+                                    {t('nav.home')}
                                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
                                 </span>
                             </Link>
@@ -39,7 +42,7 @@ const Layout = () => {
                                 <Link to="/my-bookings" className="group flex items-center gap-2.5 text-gray-500 hover:text-gray-900 font-semibold transition-all duration-300">
                                     <Briefcase size={18} className="group-hover:scale-110 transition-transform" />
                                     <span className="relative">
-                                        My Rentals
+                                        {t('nav.myRentals')}
                                         <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
                                     </span>
                                 </Link>
@@ -48,7 +51,7 @@ const Layout = () => {
                             <Link to="/about" className="group flex items-center gap-2.5 text-gray-500 hover:text-gray-900 font-semibold transition-all duration-300">
                                 <Info size={18} className="group-hover:scale-110 transition-transform" />
                                 <span className="relative">
-                                    About
+                                    {t('nav.about')}
                                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></span>
                                 </span>
                             </Link>
@@ -57,15 +60,16 @@ const Layout = () => {
 
                     {/* Right Group: Actions */}
                     <div className="flex items-center gap-6 mb-1">
+                        <LanguageSwitcher />
                         {!isAuthenticated ? (
                             <>
                                 <Link to="/login" className="group flex items-center gap-2 text-gray-600 hover:text-gray-900 font-bold transition-colors">
                                     <LogIn size={18} />
-                                    Sign In
+                                    {t('nav.signIn')}
                                 </Link>
                                 <Link to="/register" className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 active:translate-y-0.5 transition-all duration-300">
                                     <UserPlus size={18} />
-                                    Sign Up
+                                    {t('nav.signUp')}
                                 </Link>
                             </>
                         ) : (
@@ -104,34 +108,34 @@ const Layout = () => {
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
                     <div>
                         <img src={logo} alt="Teddy Rental" className="w-20 h-20 object-contain mb-4" />
-                        <p className="text-gray-400">Premium fleet management and car rental services in Ethiopia.</p>
+                        <p className="text-gray-400">{t('footer.desc')}</p>
                     </div>
                     <div>
-                        <h4 className="font-bold mb-4">Quick Links</h4>
+                        <h4 className="font-bold mb-4">{t('footer.quickLinks')}</h4>
                         <ul className="space-y-2 text-gray-400">
-                            <li><Link to="/" className="hover:text-white">Home</Link></li>
-                            <li><Link to="/about" className="hover:text-white">About Us</Link></li>
-                            <li><Link to="/contact" className="hover:text-white">Contact</Link></li>
+                            <li><Link to="/" className="hover:text-white">{t('nav.home')}</Link></li>
+                            <li><Link to="/about" className="hover:text-white">{t('nav.about')}</Link></li>
+                            <li><Link to="/contact" className="hover:text-white">{t('contact.title')}</Link></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 className="font-bold mb-4">Legal</h4>
+                        <h4 className="font-bold mb-4">{t('footer.legal')}</h4>
                         <ul className="space-y-2 text-gray-400">
-                            <li><Link to="/terms" className="hover:text-white">Terms of Service</Link></li>
-                            <li><Link to="/privacy" className="hover:text-white">Privacy Policy</Link></li>
+                            <li><Link to="/terms" className="hover:text-white">{t('footer.terms')}</Link></li>
+                            <li><Link to="/privacy" className="hover:text-white">{t('footer.privacy')}</Link></li>
                         </ul>
                     </div>
                     <div>
-                        <h4 className="font-bold mb-4">Connect</h4>
+                        <h4 className="font-bold mb-4">{t('footer.connect')}</h4>
                         <div className="text-gray-400">
-                            <p>Addis Ababa, Ethiopia</p>
+                            <p>{t('contact.addressText')}</p>
                             <p>+251 900 000 000</p>
                             <p>info@teddyrental.com</p>
                         </div>
                     </div>
                 </div>
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8 mt-8 pt-8 border-t border-gray-800 text-center text-gray-500">
-                    © {new Date().getFullYear()} Teddy Car Rental. All rights reserved.
+                    © {new Date().getFullYear()} Teddy Car Rental. {t('footer.rights')}
                 </div>
             </footer>
         </div>

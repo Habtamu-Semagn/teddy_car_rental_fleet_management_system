@@ -42,7 +42,7 @@ import Fleet from './pages/Fleet';
 function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="teddy-ui-theme">
-      <Toaster position="top-center" richColors />
+      <Toaster position="top-center" richColors toastOptions={{ className: 'font-sans' }} />
       <AuthProvider>
         <BrowserRouter>
           <Routes>

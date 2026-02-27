@@ -20,6 +20,7 @@ import {
     Shield
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
@@ -34,15 +35,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 const StatusBadge = ({ status }) => {
+    const { t } = useTranslation();
     const statusConfig = {
-        PENDING: { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock, label: 'Pending Approval' },
-        VERIFIED: { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: CheckCircle2, label: 'Docs Verified' },
-        APPROVED: { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: CheckCircle2, label: 'Approved' },
-        PAID: { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: 'Paid & Reserved' },
-        ACTIVE: { color: 'bg-green-100 text-green-700 border-green-200', icon: Car, label: 'Currently Active' },
-        COMPLETED: { color: 'bg-gray-100 text-gray-700 border-gray-200', icon: CheckCircle2, label: 'Completed' },
-        CANCELLED: { color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle, label: 'Cancelled' },
-        REJECTED: { color: 'bg-orange-100 text-orange-700 border-orange-200', icon: AlertCircle, label: 'Rejected' },
+        PENDING: { color: 'bg-yellow-100 text-yellow-700 border-yellow-200', icon: Clock, label: t('booking.status.PENDING') },
+        VERIFIED: { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: CheckCircle2, label: t('booking.status.VERIFIED') },
+        APPROVED: { color: 'bg-indigo-100 text-indigo-700 border-indigo-200', icon: CheckCircle2, label: t('booking.status.APPROVED') },
+        PAID: { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2, label: t('booking.status.PAID') },
+        ACTIVE: { color: 'bg-green-100 text-green-700 border-green-200', icon: Car, label: t('booking.status.ACTIVE') },
+        COMPLETED: { color: 'bg-gray-100 text-gray-700 border-gray-200', icon: CheckCircle2, label: t('booking.status.COMPLETED') },
+        CANCELLED: { color: 'bg-red-100 text-red-700 border-red-200', icon: XCircle, label: t('booking.status.CANCELLED') },
+        REJECTED: { color: 'bg-orange-100 text-orange-700 border-orange-200', icon: AlertCircle, label: t('booking.status.REJECTED') },
     };
 
     const config = statusConfig[status] || statusConfig.PENDING;
@@ -57,12 +59,13 @@ const StatusBadge = ({ status }) => {
 };
 
 const BookingProgressTracker = ({ status }) => {
+    const { t } = useTranslation();
     const stages = [
-        { key: 'SUBMITTED', label: 'Submitted', statuses: ['PENDING', 'VERIFIED', 'APPROVED', 'PAID', 'ACTIVE', 'COMPLETED'] },
-        { key: 'VERIFICATION', label: 'Verified', statuses: ['VERIFIED', 'APPROVED', 'PAID', 'ACTIVE', 'COMPLETED'], failStatuses: ['REJECTED'] },
-        { key: 'APPROVAL', label: 'Approved', statuses: ['APPROVED', 'PAID', 'ACTIVE', 'COMPLETED'] },
-        { key: 'ACTIVE', label: 'Trip Started', statuses: ['ACTIVE', 'COMPLETED'] },
-        { key: 'COMPLETED', label: 'Completed', statuses: ['COMPLETED'] }
+        { key: 'SUBMITTED', label: t('booking.stages.SUBMITTED'), statuses: ['PENDING', 'VERIFIED', 'APPROVED', 'PAID', 'ACTIVE', 'COMPLETED'] },
+        { key: 'VERIFICATION', label: t('booking.stages.VERIFIED'), statuses: ['VERIFIED', 'APPROVED', 'PAID', 'ACTIVE', 'COMPLETED'], failStatuses: ['REJECTED'] },
+        { key: 'APPROVAL', label: t('booking.stages.APPROVED'), statuses: ['APPROVED', 'PAID', 'ACTIVE', 'COMPLETED'] },
+        { key: 'ACTIVE', label: t('booking.stages.TRIP_STARTED'), statuses: ['ACTIVE', 'COMPLETED'] },
+        { key: 'COMPLETED', label: t('booking.status.COMPLETED'), statuses: ['COMPLETED'] }
     ];
 
     const currentIdx = stages.reduce((lastIdx, stage, idx) =>
@@ -98,7 +101,7 @@ const BookingProgressTracker = ({ status }) => {
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${isFailed ? 'text-orange-600' :
                                 isCompleted || isActive ? 'text-gray-900' : 'text-gray-400'
                                 }`}>
-                                {isFailed ? 'Issue Found' : stage.label}
+                                {isFailed ? t('booking.issueFound') : stage.label}
                             </span>
                         </div>
                     );
@@ -119,6 +122,7 @@ const BookingProgressTracker = ({ status }) => {
 };
 
 const MyBookings = () => {
+    const { t } = useTranslation();
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedBooking, setSelectedBooking] = useState(null);
@@ -131,7 +135,7 @@ const MyBookings = () => {
                 setBookings(data);
             } catch (error) {
                 console.error('Failed to fetch bookings:', error);
-                toast.error('Failed to load your bookings');
+                toast.error(t('booking.failedToLoad'));
             } finally {
                 setLoading(false);
             }
@@ -149,7 +153,7 @@ const MyBookings = () => {
             <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-gray-500 font-medium">Loading your journey...</p>
+                    <p className="text-gray-500 font-medium">{t('auth.loading')}</p>
                 </div>
             </div>
         );
@@ -164,19 +168,19 @@ const MyBookings = () => {
                         <div>
                             <Link to="/" className="inline-flex items-center text-sm text-gray-500 hover:text-primary transition-colors mb-4 group">
                                 <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" />
-                                Back to Fleet
+                                {t('fleet.backHome')}
                             </Link>
                             <h1 className="text-4xl font-display font-extrabold text-gray-900 tracking-tight">
-                                My <span className="text-primary">Rentals</span>
+                                {t('booking.myRentals')}
                             </h1>
-                            <p className="mt-2 text-gray-500 text-lg">Track your current and past car rental trips</p>
+                            <p className="mt-2 text-gray-500 text-lg">{t('booking.trackTrips')}</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <div className="relative flex-grow md:w-64">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                                 <input
                                     type="text"
-                                    placeholder="Search references..."
+                                    placeholder={t('booking.searchRef')}
                                     className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                                 />
                             </div>
@@ -191,13 +195,13 @@ const MyBookings = () => {
                         <div className="mx-auto w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
                             <Car size={40} className="text-gray-300" />
                         </div>
-                        <h3 className="text-2xl font-bold text-gray-900 mb-2">No rentals yet</h3>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('booking.noRentals')}</h3>
                         <p className="text-gray-500 mb-8 max-w-sm mx-auto">
-                            When you book a car with Teddy Rental, it will appear here for you to track and manage.
+                            {t('booking.noRentalsDesc')}
                         </p>
                         <Link to="/">
                             <Button className="rounded-xl px-8 py-6 text-lg shadow-xl shadow-primary/20 hover:shadow-primary/40 transition-all">
-                                Explore Our Fleet
+                                {t('booking.exploreFleet')}
                             </Button>
                         </Link>
                     </div>
@@ -235,18 +239,18 @@ const MyBookings = () => {
                                         <div>
                                             <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                                                Reference
+                                                {t('booking.reference')}
                                             </p>
                                             <h4 className="text-lg font-mono font-bold text-gray-900">#BK-{booking.id.toString().padStart(5, '0')}</h4>
                                         </div>
 
                                         <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Vehicle</p>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">{t('booking.vehicle')}</p>
                                             <h4 className="text-base font-bold text-gray-900 truncate">
                                                 {booking.package ? (
                                                     <>
                                                         <span className="text-primary">{booking.package.name}</span>
-                                                        <span className="block text-xs font-medium text-gray-400 mt-0.5">{booking.package.category} Package</span>
+                                                        <span className="block text-xs font-medium text-gray-400 mt-0.5">{t(`search.${booking.package.category.toLowerCase()}`)} Package</span>
                                                     </>
                                                 ) : (
                                                     <>
@@ -258,7 +262,7 @@ const MyBookings = () => {
                                         </div>
 
                                         <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Rental Period</p>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">{t('booking.rentalPeriod')}</p>
                                             <div className="flex items-center gap-2 text-gray-900 font-semibold text-sm">
                                                 <Calendar size={14} className="text-primary" />
                                                 <span>{new Date(booking.startDate).toLocaleDateString()}</span>
@@ -268,7 +272,7 @@ const MyBookings = () => {
                                         </div>
 
                                         <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">Total Amount</p>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">{t('booking.totalAmount')}</p>
                                             <h4 className="text-lg font-black text-gray-900">
                                                 {booking.totalAmount?.toLocaleString()} <span className="text-xs font-bold text-gray-400">ETB</span>
                                             </h4>
@@ -281,7 +285,7 @@ const MyBookings = () => {
                                             onClick={() => openDetails(booking)}
                                             className="w-full lg:w-32 rounded-xl shadow-lg shadow-primary/10 hover:shadow-primary/30 transition-all font-bold group/btn"
                                         >
-                                            Details
+                                            {t('booking.details')}
                                             <ChevronRight size={16} className="ml-1 group-hover/btn:translate-x-1 transition-transform" />
                                         </Button>
                                     </div>
@@ -300,9 +304,9 @@ const MyBookings = () => {
                             <div className="absolute top-0 right-0 p-8 opacity-10">
                                 <Car size={160} />
                             </div>
-                            <DialogTitle className="text-2xl font-black tracking-tight mb-2">Booking Status Tracker</DialogTitle>
+                            <DialogTitle className="text-2xl font-black tracking-tight mb-2">{t('booking.statusTracker')}</DialogTitle>
                             <DialogDescription className="text-gray-400">
-                                Real-time update for reference #BK-{selectedBooking?.id?.toString().padStart(5, '0')}
+                                {t('booking.realTimeUpdate')} #BK-{selectedBooking?.id?.toString().padStart(5, '0')}
                             </DialogDescription>
                         </DialogHeader>
 
@@ -317,20 +321,20 @@ const MyBookings = () => {
                                     {/* Vehicle Card */}
                                     <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
-                                            <Car size={14} className="text-primary" /> {selectedBooking?.package ? 'Package Information' : 'Vehicle Information'}
+                                            <Car size={14} className="text-primary" /> {selectedBooking?.package ? t('booking.packageInfo') : t('booking.vehicleInfo')}
                                         </h4>
                                         {selectedBooking?.package ? (
                                             <div className="space-y-3">
                                                 <div>
                                                     <p className="font-bold text-gray-900 text-lg">{selectedBooking.package.name}</p>
-                                                    <p className="text-sm text-gray-500 mt-0.5">{selectedBooking.package.category}</p>
+                                                    <p className="text-sm text-gray-500 mt-0.5">{t(`search.${selectedBooking.package.category.toLowerCase()}`)}</p>
                                                     <p className="text-xs font-bold text-primary bg-primary/5 inline-block px-2 py-0.5 rounded mt-2 uppercase tracking-tighter">
                                                         {selectedBooking.package.period}
                                                     </p>
                                                 </div>
                                                 {selectedBooking.package.features && selectedBooking.package.features.length > 0 && (
                                                     <div className="pt-2 border-t border-gray-200">
-                                                        <p className="text-xs font-medium text-gray-500 mb-2">Package Includes:</p>
+                                                        <p className="text-xs font-medium text-gray-500 mb-2">{t('booking.includes')}</p>
                                                         <ul className="space-y-1">
                                                             {selectedBooking.package.features.slice(0, 3).map((feature, idx) => (
                                                                 <li key={idx} className="text-xs text-gray-600 flex items-center gap-1">
@@ -353,7 +357,7 @@ const MyBookings = () => {
                                                     <p className="font-bold text-gray-900">{selectedBooking?.car?.make} {selectedBooking?.car?.model}</p>
                                                     <p className="text-sm text-gray-500 mt-0.5">Plate: {selectedBooking?.car?.plateNumber}</p>
                                                     <p className="text-xs font-bold text-primary bg-primary/5 inline-block px-2 py-0.5 rounded mt-2 uppercase tracking-tighter">
-                                                        {selectedBooking?.car?.category}
+                                                        {t(`search.${selectedBooking?.car?.category.toLowerCase()}`)}
                                                     </p>
                                                 </div>
                                             </div>
@@ -363,16 +367,16 @@ const MyBookings = () => {
                                     {/* Location Info */}
                                     <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4 flex items-center gap-2">
-                                            <MapPin size={14} className="text-primary" /> Pickup Location
+                                            <MapPin size={14} className="text-primary" /> {t('booking.pickupLocation')}
                                         </h4>
                                         <p className="text-sm font-medium text-gray-700 leading-relaxed">
                                             {selectedBooking?.pickupLocation || 'Main Office, Addis Ababa'}
                                         </p>
                                         <div className="mt-3">
                                             {selectedBooking?.isDelivery ? (
-                                                <Badge className="bg-orange-100 text-orange-800 border-orange-200">Delivery Pickup</Badge>
+                                                <Badge className="bg-orange-100 text-orange-800 border-orange-200">{t('booking.deliveryPickup')}</Badge>
                                             ) : (
-                                                <Badge className="bg-green-100 text-green-800 border-green-200">Office Branch</Badge>
+                                                <Badge className="bg-green-100 text-green-800 border-green-200">{t('booking.officeBranch')}</Badge>
                                             )}
                                         </div>
                                     </div>
@@ -382,7 +386,7 @@ const MyBookings = () => {
                                     {/* Support / Assistant Info */}
                                     <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10">
                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4 flex items-center gap-2">
-                                            <UserIcon size={14} /> Assigned Personnel
+                                            <UserIcon size={14} /> {t('booking.assignedPersonnel')}
                                         </h4>
                                         <div className="space-y-4">
                                             <div className="flex items-center gap-3">
@@ -390,7 +394,7 @@ const MyBookings = () => {
                                                     <Shield size={20} />
                                                 </div>
                                                 <div>
-                                                    <p className="text-xs text-gray-400 font-bold uppercase">Company Agent</p>
+                                                    <p className="text-xs text-gray-400 font-bold uppercase">{t('booking.companyAgent')}</p>
                                                     <p className="font-bold text-gray-900 text-sm">TEDDY-ADMIN-01</p>
                                                 </div>
                                             </div>
@@ -401,7 +405,7 @@ const MyBookings = () => {
                                                         <Car size={20} />
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs text-gray-400 font-bold uppercase">Delivery Driver</p>
+                                                        <p className="text-xs text-gray-400 font-bold uppercase">{t('booking.deliveryDriver')}</p>
                                                         <p className="font-bold text-gray-900 text-sm">{selectedBooking.assignedDriver}</p>
                                                     </div>
                                                 </div>
@@ -412,7 +416,7 @@ const MyBookings = () => {
                                     {/* Contact Support */}
                                     <div className="bg-white rounded-2xl p-5 border border-dashed border-gray-200">
                                         <p className="text-xs text-center text-gray-400 font-medium">
-                                            Need help? Contact our 24/7 support line:
+                                            {t('booking.needHelp')}:
                                             <span className="block text-primary font-black mt-1 text-base">+251 911 22 33 44</span>
                                         </p>
                                     </div>
@@ -423,7 +427,7 @@ const MyBookings = () => {
 
                     <div className="p-6 bg-gray-50 border-t flex justify-end">
                         <Button onClick={() => setDetailsOpen(false)} variant="outline" className="rounded-xl px-8 font-bold">
-                            Close
+                            {t('booking.close')}
                         </Button>
                     </div>
                 </DialogContent>

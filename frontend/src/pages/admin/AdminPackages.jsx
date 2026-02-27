@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Package, Plus, Edit, Trash2,
     CheckCircle2, Info, DollarSign, Calendar, Loader2
@@ -29,6 +30,7 @@ import { api } from "@/api";
 import { toast } from 'sonner';
 
 const AdminPackages = () => {
+    const { t } = useTranslation();
     const [packages, setPackages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -118,7 +120,7 @@ const AdminPackages = () => {
     const confirmDeletePackage = async () => {
         try {
             await api.delete(`/packages/${confirmDelete}`);
-            toast.success('Package deleted.');
+            toast.success(t('admin.packageDeleted'));
             fetchPackages();
         } catch (error) {
             toast.error(error.message || 'Failed to delete package');

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     DollarSign, TrendingUp, TrendingDown,
     Calendar, Download, ArrowUpRight, ArrowDownRight,
@@ -22,6 +23,7 @@ import { api } from "@/api";
 import { toast } from 'sonner';
 
 const AdminFinancials = () => {
+    const { t } = useTranslation();
     const [transactions, setTransactions] = useState([]);
     const [allTransactions, setAllTransactions] = useState([]);
     const [stats, setStats] = useState({
@@ -81,7 +83,7 @@ const AdminFinancials = () => {
         const a = document.createElement('a'); a.href = url;
         a.download = `transactions_${currentMonthOnly ? 'current_month' : 'all'}.csv`;
         a.click(); URL.revokeObjectURL(url);
-        toast.success('Transactions exported!');
+        toast.success(t('admin.transactionsExported'));
     };
 
 

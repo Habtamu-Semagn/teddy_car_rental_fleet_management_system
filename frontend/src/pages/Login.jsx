@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
 
 const Login = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { login } = useAuth();
@@ -64,9 +66,9 @@ const Login = () => {
         <div className="min-h-[85vh] flex flex-col justify-center py-12 sm:px-6 lg:px-8 bg-gray-50">
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="text-center mb-6">
-                    <h1 className="text-2xl font-bold text-primary mb-2">Welcome Back!</h1>
+                    <h1 className="text-2xl font-bold text-primary mb-2">{t('auth.welcomeBack')}</h1>
                     <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                        Sign in to your account
+                        {t('auth.signInToAccount')}
                     </h2>
                 </div>
 
@@ -86,7 +88,7 @@ const Login = () => {
 
                         <div>
                             <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
-                                Email address
+                                {t('auth.emailAddress')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -95,7 +97,7 @@ const Login = () => {
                                     type="email"
                                     autoComplete="email"
                                     required
-                                    placeholder="Enter your email"
+                                    placeholder={t('auth.emailPlaceholder')}
                                     className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -105,7 +107,7 @@ const Login = () => {
 
                         <div>
                             <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
-                                Password
+                                {t('auth.password')}
                             </label>
                             <div className="mt-2">
                                 <input
@@ -114,7 +116,7 @@ const Login = () => {
                                     type="password"
                                     autoComplete="current-password"
                                     required
-                                    placeholder="Enter your password"
+                                    placeholder={t('auth.passwordPlaceholder')}
                                     className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all text-gray-900"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -131,20 +133,20 @@ const Login = () => {
                                     className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded cursor-pointer"
                                 />
                                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 cursor-pointer">
-                                    Remember me
+                                    {t('auth.rememberMe')}
                                 </label>
                             </div>
 
                             <div className="text-sm">
                                 <a href="#" className="font-medium text-primary hover:text-primary/80 transition-colors">
-                                    Forgot your password?
+                                    {t('auth.forgotPassword')}
                                 </a>
                             </div>
                         </div>
 
                         <div className="pt-2">
                             <Button type="submit" isLoading={loading} className="w-full py-3.5 text-base font-bold shadow-md hover:shadow-lg">
-                                Sign In
+                                {t('auth.signIn')}
                             </Button>
                         </div>
                     </form>
@@ -156,7 +158,7 @@ const Login = () => {
                             </div>
                             <div className="relative flex justify-center text-sm">
                                 <span className="px-2 bg-white text-gray-500">
-                                    Don't have an account?
+                                    {t('auth.noAccount')}
                                 </span>
                             </div>
                         </div>
@@ -164,7 +166,7 @@ const Login = () => {
                         <div className="mt-6 grid gap-3">
                             <Link to={carId ? `/register?carId=${carId}` : '/register'} className="w-full">
                                 <Button className="w-full bg-gray-900 hover:bg-black text-white border-gray-900 shadow-md hover:shadow-lg transition-all py-3">
-                                    Create Account
+                                    {t('auth.createAccount')}
                                 </Button>
                             </Link>
                         </div>
